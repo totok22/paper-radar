@@ -6,7 +6,8 @@ profile with the mean of its top seed matches, then subtracts negatives.
 The paper keeps the max over topics (one strong direction is enough).
 Scores are scaled by each topic's 95th percentile so a long profile does
 not drown a short one. Papers under `min_emb` are dropped, but at least
-`min_keep` survive so a quiet day still produces a digest.
+`min_keep` in-domain papers survive so a quiet day still produces a digest.
+Non-vehicle robotics never fill that floor or a direction slot.
 """
 from __future__ import annotations
 
@@ -35,7 +36,8 @@ def calibrate(sim: np.ndarray) -> np.ndarray:
 
 
 def select_indices(scores: np.ndarray, top_k: int, min_emb: float, min_keep: int) -> list[int]:
-    order = list(np.argsort(-scores))
+    # Scores at or below -1e8 are off-domain sentinels and must not refill min_keep.
+    order = [int(i) for i in np.argsort(-scores) if float(scores[i]) > -1e8]
     passed = [i for i in order if scores[i] >= min_emb]
     if len(passed) < min_keep:
         passed = order[:max(min_keep, 0)]
@@ -59,11 +61,20 @@ def prefilter(papers, topics, ecfg: dict, top_k: int, store=None,
     emb = Embedder(ecfg, store)
     max_seeds = int(ecfg.get("seeds_per_topic", 6))
     profiles = [t.profile_text for t in tlist]
-    negatives = [" ".join(t.negative_texts) if t.negative_texts else "" for t in tlist]
+    # Every topic pushes away non-vehicle robotics, even when the yaml has no negatives.
+    # Otherwise "MPC" and "planning" in the profiles pull manipulators and warehouse fleets
+    # over min_emb.
+    off_neg = (
+        "robotic manipulator arm grasping gripper warehouse multi-robot "
+        "humanoid quadruped legged locomotion drone UAV surgical robot"
+    )
+    negatives = [
+        f"{' '.join(t.negative_texts)} {off_neg}".strip() if t.negative_texts else off_neg
+        for t in tlist
+    ]
     groups = [_seed_texts(t, max_seeds) for t in tlist]
     seed_flat = [s for g in groups for s in g]
-    # Empty negatives still need a row so the matrix stays aligned; the mask drops them.
-    neg_rows = [n if n else "__none__" for n in negatives]
+    neg_rows = negatives
     texts = profiles + neg_rows + seed_flat + [p.text for p in papers]
     X = emb.encode(texts)
     nT = len(tlist)
@@ -83,7 +94,7 @@ def prefilter(papers, topics, ecfg: dict, top_k: int, store=None,
         k = min(3, seed_sim.shape[1])
         seed_mean[:, j] = np.sort(seed_sim, axis=1)[:, -k:].mean(axis=1)
         offset += len(group)
-    has_neg = np.array([bool(n) for n in negatives])
+    has_neg = np.array([True] * len(negatives))
     sim = blend_scores(sim_profile, seed_mean, sim_neg, has_neg, float(ecfg.get("negative_weight", 0.5)))
     z = calibrate(sim)
     best = z.argmax(axis=1)
@@ -93,19 +104,23 @@ def prefilter(papers, topics, ecfg: dict, top_k: int, store=None,
         p.best_topic = tlist[int(best[i])].id
         p.signals["direction"] = tlist[int(best[i])].direction
         p.emb_score = float(z[i, best[i]])
-        if not in_domain(p):
-            # Sink off-domain hits (e.g. a NeurIPS web-agent paper that shares "agent")
-            # so they do not fill the digest when an embedding API is unavailable.
-            p.emb_score -= 2.0
-            p.signals["off_domain"] = True
-    zs = np.array([p.emb_score for p in papers], dtype=float)
-    lo, hi = np.percentile(zs, 5), float(zs.max()) if len(zs) else 0.0
+        p.signals["off_domain"] = not in_domain(p)
+    kept_scores = [p.emb_score for p in papers if not p.signals.get("off_domain")]
+    if kept_scores:
+        lo, hi = float(np.percentile(kept_scores, 5)), float(max(kept_scores))
+    else:
+        lo, hi = 0.0, 1.0
     for p in papers:
-        p.signals["emb_norm"] = float(np.clip((p.emb_score - lo) / (hi - lo + 1e-9), 0, 1))
+        if p.signals.get("off_domain"):
+            p.signals["emb_norm"] = 0.0
+        else:
+            p.signals["emb_norm"] = float(np.clip((p.emb_score - lo) / (hi - lo + 1e-9), 0, 1))
+    zs = np.array([-1e9 if p.signals.get("off_domain") else p.emb_score for p in papers], dtype=float)
     idx = select_indices(zs, int(top_k), float(min_emb), int(min_keep))
     prefilter.backend = emb.backend
-    log.info("embedding backend=%s; prefilter %d -> %d (floor %.2f, keep≥%d)",
-             emb.backend, len(papers), len(idx), float(min_emb), int(min_keep))
+    log.info("embedding backend=%s; prefilter %d -> %d (floor %.2f, keep≥%d, off-domain %d)",
+             emb.backend, len(papers), len(idx), float(min_emb), int(min_keep),
+             sum(1 for p in papers if p.signals.get("off_domain")))
     if not idx:
         return [], None
     return [papers[i] for i in idx], P[idx]
@@ -140,6 +155,8 @@ def _mmr(papers, vecs, n: int, lam: float, per_topic_max: int) -> list[int]:
     while cand and len(chosen) < n:
         best, bval = None, -1e9
         for i in cand:
+            if papers[i].signals.get("off_domain"):
+                continue
             if cnt.get(papers[i].best_topic, 0) >= per_topic_max:
                 continue
             red = max((float(sims[i, j]) for j in chosen), default=0.0)
@@ -170,7 +187,8 @@ def _cover_directions(papers, chosen: list[int], swaps: int) -> list[int]:
         if d and d not in present and d not in missing:
             missing.append(d)
     for d in missing[:swaps]:
-        pool = [i for i in range(len(papers)) if i not in chosen and _direction(papers[i]) == d]
+        pool = [i for i in range(len(papers))
+                if i not in chosen and not papers[i].signals.get("off_domain") and _direction(papers[i]) == d]
         if not pool:
             continue
         pool.sort(key=lambda i: (-papers[i].final_score, -papers[i].emb_score))
@@ -201,7 +219,7 @@ def mmr_select(papers, vecs, n: int, lam: float = 0.7, per_topic_max: int = 4, e
         for i in chosen:
             counts[papers[i].best_topic] = counts.get(papers[i].best_topic, 0) + 1
             dir_counts[_direction(papers[i])] = dir_counts.get(_direction(papers[i]), 0) + 1
-        pool = [i for i in range(len(papers)) if i not in set(chosen)]
+        pool = [i for i in range(len(papers)) if i not in set(chosen) and not papers[i].signals.get("off_domain")]
         pool.sort(key=lambda i: (
             dir_counts.get(_direction(papers[i]), 0),
             counts.get(papers[i].best_topic, 0),

@@ -41,6 +41,39 @@ sources:
   rss:
     enabled: false           # 通用 RSS 插槽
     feeds: {}
+  deepseek_search:
+    enabled: true            # DeepSeek 网页搜索，用 LLM_API_KEY；没 key 就跳过
+    queries_per_topic: 3     # 每个子方向：arXiv、IEEE/ScienceDirect、OpenReview 变体
+    count: 50                # 每次 1–50 条；按请求计费，不按条数
+    min_rerank_score: 1.0    # 官方把 >=1.5 视为高质量；1.0 多留一些再交给去重和领域过滤
+    lookback_days: 7         # 查询里的 after: 日期。返回的 date 可能是抓取时间，不当作发表日期
+    max_requests: 40         # 单次运行搜索请求上限（11 个子方向 × 3 ≈ 33）
+    doi_lookups: 20          # 没有 arXiv id / DOI 时，用标题问 OpenAlex，不够再问 Crossref
+    base_url: https://api.deepseek.com
+    allow_domains:           # 不在表里的站点（博客、CSDN、GitHub、个人主页）直接丢掉
+      - arxiv.org
+      - doi.org
+      - ieeexplore.ieee.org
+      - sciencedirect.com
+      - link.springer.com
+      - dl.acm.org
+      - openreview.net
+      - proceedings.mlr.press
+      - proceedings.neurips.cc
+      - openaccess.thecvf.com
+      - thecvf.com
+      - aaai.org
+      - ijcai.org
+      - onlinelibrary.wiley.com
+      - iopscience.iop.org
+      - mdpi.com
+      - frontiersin.org
+      - nature.com
+      - science.org
+      - ascelibrary.org
+      - journals.sagepub.com
+      - hal.science
+      - semanticscholar.org
 
 embedding:                   # 预筛：配了 API 用 API；否则 local_model；再否则 TF-IDF
   # base_url: https://api.siliconflow.cn/v1
@@ -128,9 +161,10 @@ topics:
     name: 基元的扩展与选择 + DMP 算法
     query: dynamical movement primitives trajectory generation
     description: >-
-      Motion primitives and dynamical movement primitives (DMP): learning, generalization, expansion and
-      selection of primitives from demonstrations; primitive-based trajectory generation and motion planning
-      for vehicles and robots; probabilistic movement primitives; skill libraries and primitive selection.
+      Motion primitives and dynamical movement primitives (DMP) for on-road vehicles: learning,
+      generalization, expansion and selection of driving primitives from demonstrations; primitive-based
+      trajectory generation and motion planning for autonomous vehicles; probabilistic movement primitives;
+      skill libraries and primitive selection. Robot-arm DMPs count only when the paper transfers them to driving.
     positive:
       - {id: "DOI:10.1162/NECO_a_00393", title: "Dynamical Movement Primitives: Learning Attractor Models for Motor Behaviors"}
       - {id: "ARXIV:1604.07446", title: "A Survey of Motion Planning and Control Techniques for Self-driving Urban Vehicles"}

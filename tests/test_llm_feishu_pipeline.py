@@ -23,6 +23,8 @@ class Resp:
 
 
 def test_llm_json_and_heuristic_chinese():
+    from paper_radar.rank.llm import BATCH, SINGLE
+    assert "机械臂" in SINGLE and "道路车辆" in BATCH
     raw = "```json\n{\"reviews\": [{\"i\": 1, \"topic\": \"plan\", \"relevance\": 9, \"novelty\": 4, \"rigor\": 7, \"beginner\": 6, \"tldr\": \"用语言模型扩展驾驶基元。\", \"reason\": \"贴近规划方向。\"}]}\n```"
     data = extract_json(raw)
     review = normalize_review(data["reviews"][0], {"plan"})
@@ -108,6 +110,8 @@ def test_shipped_config_validates():
     assert cfg["llm"]["model"] == "deepseek-flash"
     assert cfg["sources"]["semantic_scholar"]["min_interval"] == 1.1
     assert cfg["sources"]["semantic_scholar"]["max_requests"] <= 400
+    assert cfg["sources"]["deepseek_search"]["enabled"] is True
+    assert cfg["sources"]["deepseek_search"]["max_requests"] <= 50
     assert any(t["id"] == "scen_diffusion" for t in cfg["topics"])
 
 

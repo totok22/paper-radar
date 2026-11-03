@@ -19,7 +19,13 @@ log = logging.getLogger("paper_radar")
 
 _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.I)
 
+_SCOPE = """领域只限道路上的自动驾驶 / 道路车辆：运动规划、车辆控制与 MPC、驾驶场景生成、面向驾驶的 VLM/LLM。
+仓储机器人、机械臂、抓取、足式/人形、无人机、通用多机器人，如果摘要没有明确写可迁移到道路车辆（autonomous driving、on-road、ego vehicle、lane、nuPlan/CARLA/Waymo 等），relevance 必须给 1-3。
+只是方法名字像（MPC、planning、control、trajectory、DMP）而对象不是道路车辆，同样给 1-3。
+relevance 达到 5 及以上，必须是道路车辆或明确的车辆迁移。"""
+
 SINGLE = """你是自动驾驶方向（运动规划 / 运动控制 / 场景生成）的审稿人，正在帮一名大四学生筛每日论文。
+""" + _SCOPE + """
 兴趣子方向：
 {topics}
 
@@ -37,9 +43,10 @@ SINGLE = """你是自动驾驶方向（运动规划 / 运动控制 / 场景生�
   "beginner": <1-10 整数，对入门者的可读性>,
   "tldr": "<一句中文 TL;DR，不超过 60 字>",
   "reason": "<一句中文，为什么推荐或不推荐，不超过 80 字>"}}
-和所有子方向都无关时 relevance 给 1-3。"""
+和所有子方向都无关，或对象不是道路车辆时，relevance 给 1-3。"""
 
 BATCH = """你是自动驾驶方向（运动规划 / 运动控制 / 场景生成）的审稿人，正在帮一名大四学生筛每日论文。
+""" + _SCOPE + """
 兴趣子方向：
 {topics}
 
@@ -53,7 +60,7 @@ BATCH = """你是自动驾驶方向（运动规划 / 运动控制 / 场景生成
     "tldr": "<一句中文 TL;DR，不超过 60 字>",
     "reason": "<一句中文推荐理由，不超过 80 字>"}}
 ]}}
-reviews 必须覆盖每一篇。和所有子方向都无关时 relevance 给 1-3。"""
+reviews 必须覆盖每一篇。和所有子方向都无关，或对象不是道路车辆时，relevance 给 1-3。"""
 
 
 def extract_json(txt: str):

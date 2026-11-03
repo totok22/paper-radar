@@ -61,6 +61,8 @@ def test_calibrated_threshold_and_exploration_slot():
     assert select_indices(scores, top_k=2, min_emb=0.35, min_keep=1) == [1, 2]
     # Nothing clears the floor: still keep min_keep, highest first.
     assert select_indices(np.array([0.1, 0.2, 0.05]), top_k=5, min_emb=0.8, min_keep=2)[:2] == [1, 0]
+    # Off-domain sentinels must not refill min_keep.
+    assert select_indices(np.array([-1e9, 0.9, -1e9]), top_k=5, min_emb=0.35, min_keep=3) == [1]
 
     profile = np.array([[0.2, 0.9], [0.8, 0.1]])
     seeds = np.array([[np.nan, 0.4], [0.2, np.nan]])
@@ -104,6 +106,25 @@ def test_calibrated_threshold_and_exploration_slot():
     assert {p.signals["direction"] for p in picked} == {"运动控制", "运动规划"}
     assert any(p.signals.get("explore") for p in picked)
 
+    vehicle = Paper(title="Vehicle MPC on the highway", abstract="path tracking")
+    vehicle.best_topic = "mpc"
+    vehicle.signals = {"direction": "运动控制"}
+    vehicle.final_score = 0.8
+    vehicle.emb_score = 0.8
+    extra = Paper(title="Another vehicle controller", abstract="lane keeping")
+    extra.best_topic = "dyn"
+    extra.signals = {"direction": "运动控制"}
+    extra.final_score = 0.7
+    extra.emb_score = 0.7
+    warehouse = Paper(title="Warehouse multi-robot planning", abstract="mobile robots")
+    warehouse.best_topic = "plan"
+    warehouse.signals = {"direction": "运动规划", "off_domain": True}
+    warehouse.final_score = 0.99
+    warehouse.emb_score = 0.99
+    picked = mmr_select([vehicle, extra, warehouse], np.eye(3), n=2, lam=1.0, per_topic_max=2, exploration=1)
+    assert all(not p.signals.get("off_domain") for p in picked)
+    assert {p.signals["direction"] for p in picked} == {"运动控制"}
+
 
 def test_openalex_pdf_and_quality_signals():
     work = {
@@ -135,6 +156,26 @@ def test_openalex_pdf_and_quality_signals():
     drive = Paper(title="MPC path tracking for an autonomous vehicle",
                   abstract="We control a vehicle along a reference trajectory.")
     assert in_domain(drive) and not in_domain(web)
+    assert not in_domain(Paper(
+        title="Energy-Based Policy Orchestration for a Robot Manipulator",
+        abstract="We orchestrate energy-based policies for a 7-DoF robotic arm and its gripper.",
+    ))
+    assert not in_domain(Paper(
+        title="Warehouse multi-robot task planning",
+        abstract="Multi-robot motion planning and task allocation for mobile robots in a warehouse.",
+    ))
+    assert not in_domain(Paper(
+        title="RLiD: Robust Local Interaction Dynamics",
+        abstract="A policy for coordinating indoor service robots in an office building.",
+    ))
+    assert not in_domain(Paper(
+        title="Nonlinear MPC for a robotic manipulator",
+        abstract="Real-time model predictive control of a 6-axis robot arm.",
+    ))
+    assert in_domain(Paper(
+        title="Manipulator primitives transferred to autonomous driving",
+        abstract="A robot-arm DMP library is adapted for ego-vehicle lane change on public roads.",
+    ))
 
     summary = _openreview_summary({
         "count": 2,

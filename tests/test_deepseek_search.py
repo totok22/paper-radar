@@ -5,7 +5,10 @@ from paper_radar.rank.score import prefilter
 from paper_radar.sources.deepseek_search import (
     DeepSeekSearchSource,
     apply_arxiv_meta,
+    apply_biblio,
     arxiv_id_from_url,
+    biblio_from_crossref,
+    biblio_from_openalex,
     doi_from_url,
     drop_reason,
     fit_query,
@@ -95,6 +98,14 @@ def test_queries_stay_within_128_and_carry_after():
     dmp = queries_for_topic(bare, "2026-10-27", 1)[0]
     assert "autonomous driving" in dmp and "after:2026-10-27" in dmp
     assert fit_query("hello", "after:2026-01-01").endswith("after:2026-01-01")
+    topic.extra_queries = ["vehicle path tracking MPC tire model"]
+    extra = queries_for_topic(topic, "2026-10-27", 3)
+    assert len(extra) == 4
+    assert extra[:3] == qs
+    assert "vehicle path tracking" in extra[3]
+    assert "site:arxiv.org OR site:ieeexplore.ieee.org" in extra[3]
+    assert "after:2026-10-27" in extra[3]
+    assert len(extra[3]) <= 128
 
 
 def test_title_lookup_and_atom_enrich():
@@ -150,6 +161,8 @@ def test_fetch_filters_enriches_and_survives_errors(monkeypatch):
         if "export.arxiv.org" in url:
             assert "2401.12345" in kw["params"]["id_list"]
             return Resp(200, text=ATOM)
+        if "openalex.org/works/doi:" in url or "api.crossref.org/works/" in url:
+            return Resp(404, {})
         if "api.openalex.org" in url:
             return Resp(200, {"results": [{
                 "title": "MPC tracking for an autonomous vehicle on the highway",
@@ -232,3 +245,80 @@ def test_prefilter_keeps_vehicles_and_drops_non_vehicle_robotics():
     assert "Manipulator" not in titles
     assert "Warehouse" not in titles
     assert all(not p.signals.get("off_domain") for p in kept)
+
+
+def test_biblio_fills_missing_authors_and_date_only():
+    work = {
+        "doi": "https://doi.org/10.1080/00423114.2024.1",
+        "publication_date": "2024-05-02",
+        "authorships": [{"author": {"display_name": "Li Wei"}}],
+        "primary_location": {"source": {"display_name": "Vehicle System Dynamics"}},
+        "abstract_inverted_index": {"Tire": [0], "model": [1], "identification": [2]},
+        "best_oa_location": {"pdf_url": "https://oa.example.org/vsd.pdf"},
+    }
+    info = biblio_from_openalex(work)
+    paper = Paper(title="Tire model", abstract="short", doi="10.1080/00423114.2024.1")
+    assert apply_biblio(paper, info)
+    assert paper.authors == ["Li Wei"]
+    assert paper.published == "2024-05-02"
+    assert paper.venue == "Vehicle System Dynamics"
+    assert paper.abstract == "Tire model identification"
+    assert paper.pdf_url.endswith(".pdf")
+    paper.abstract = "x" * 120
+    paper.authors = ["Keep Me"]
+    apply_biblio(paper, info)
+    assert paper.authors == ["Keep Me"]
+    assert paper.abstract == "x" * 120
+    cr = biblio_from_crossref({
+        "DOI": "10.1016/j.conengprac.2024.1",
+        "author": [{"given": "Ann", "family": "Lee"}],
+        "issued": {"date-parts": [[2024, 7]]},
+        "container-title": ["Control Engineering Practice"],
+    })
+    assert cr["authors"] == ["Ann Lee"]
+    assert cr["published"] == "2024-07-01"
+    assert cr["venue"] == "Control Engineering Practice"
+
+
+def test_fetch_fills_journal_biblio_by_doi(monkeypatch):
+    def fake(method, url, **kw):
+        if "tools/search" in url:
+            return Resp(200, {"results": [{
+                "title": "Tire model identification for path tracking",
+                "url": "https://doi.org/10.1080/00423114.2024.9",
+                "summary": "A long search summary that must stay in place. " * 4,
+                "rerank_score": 1.6,
+            }]})
+        if "openalex.org/works/doi:" in url:
+            assert url.endswith("doi:10.1080/00423114.2024.9")
+            assert kw["params"]["mailto"] == "lab@example.edu"
+            return Resp(200, {
+                "publication_date": "2024-05-02",
+                "authorships": [{"author": {"display_name": "Li Wei"}}],
+                "primary_location": {"source": {"display_name": "Vehicle System Dynamics"}},
+                "abstract_inverted_index": {"Different": [0], "abstract": [1]},
+                "doi": "https://doi.org/10.1080/00423114.2024.9",
+            })
+        if "export.arxiv.org" in url:
+            return Resp(200, text="<feed></feed>")
+        raise AssertionError(url)
+
+    monkeypatch.setattr("paper_radar.sources.deepseek_search.request", fake)
+    topic = Topic(id="ctrl", name="MPC", direction="运动控制", description="vehicle",
+                  query="mpc autonomous vehicle",
+                  extra_queries=["tire model path tracking vehicle"])
+    src = DeepSeekSearchSource(
+        {"api_key": "k", "queries_per_topic": 3, "count": 50, "min_rerank_score": 1.0,
+         "max_requests": 10, "doi_lookups": 0, "biblio_lookups": 4,
+         "email": "lab@example.edu", "allow_domains": ALLOW + ["tandfonline.com"]},
+        {},
+    )
+    # doi.org is already allowlisted; the hit URL is doi.org so it is kept.
+    papers = src.fetch({"ctrl": topic})
+    assert len(papers) == 1
+    paper = papers[0]
+    assert paper.authors == ["Li Wei"]
+    assert paper.published == "2024-05-02"
+    assert paper.venue == "Vehicle System Dynamics"
+    assert paper.abstract.startswith("A long search summary")
+    assert src.sent == 4  # 3 base queries + 1 extra

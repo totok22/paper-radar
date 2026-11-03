@@ -68,6 +68,8 @@ def run(cfg: dict, dry_run: bool = False, no_mark: bool = False) -> dict:
     kept, vecs = prefilter(
         cands, topics, cfg.get("embedding") or {}, int(rk.get("top_k", 40)), store=store,
         min_emb=float(rk.get("min_emb", 0.35)), min_keep=int(rk.get("min_keep", 8)),
+        direction_keep=int(rk.get("direction_keep", 6)),
+        direction_min_emb=float(rk.get("direction_min_emb", 0.22)),
     )
     n_pre = len(kept)
     embedder_name = getattr(prefilter, "backend", "tfidf")
@@ -118,6 +120,8 @@ def run(cfg: dict, dry_run: bool = False, no_mark: bool = False) -> dict:
     selected = mmr_select(
         kept, vecs, int(rk.get("top_n", 12)), float(rk.get("mmr_lambda", 0.7)),
         int(rk.get("per_topic_max", 3)), int(rk.get("exploration_slots", 1)),
+        direction_mins=rk.get("direction_mins") or {"运动控制": 2},
+        per_direction_min=int(rk.get("per_direction_min", 1)),
     )
     fill_heuristic_text(selected, topics)
 

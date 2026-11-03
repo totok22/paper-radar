@@ -22,7 +22,8 @@ TIER1 = ["CoRL", "RSS", "CVPR", "ICCV", "ECCV", "NeurIPS", "ICLR", "ICML", "T-RO
          "Transactions on Robotics", "Science Robotics", "IJRR", "International Journal of Robotics Research"]
 TIER2 = ["ICRA", "IROS", "RA-L", "RAL", "Robotics and Automation Letters", "T-ITS",
          "Transactions on Intelligent Transportation", "T-IV", "Transactions on Intelligent Vehicles",
-         "TCST", "Control Systems Technology", "AAAI", "IJCAI", "TVT", "Transactions on Vehicular Technology",
+         "TCST", "Control Systems Technology", "Control Engineering Practice",
+         "AAAI", "IJCAI", "TVT", "Transactions on Vehicular Technology",
          "TPAMI", "Pattern Analysis and Machine Intelligence"]
 TIER3 = ["ITSC", "IV 20", "Intelligent Vehicles Symposium", "WACV", "ACC", "CDC", "L4DC", "Vehicle System Dynamics"]
 ACCEPT = re.compile(r"accept|to appear|published|camera[- ]ready|in proceedings|oral|spotlight", re.I)
@@ -40,6 +41,21 @@ _STRONG_DRIVING = re.compile(
 _WEAK_VEHICLE = re.compile(
     r"\b(driving|driver|drivers|vehicle|vehicles|vehicular|automotive|automobile|"
     r"car|cars|truck|trucks|motorway|roadway|intersection|highway|lane|traffic)\b",
+    re.I,
+)
+# Vehicle-control wording that often appears without the word "vehicle".
+# Checked only after the off-vehicle robotics screen, so a manipulator paper
+# that mentions yaw or MPC stays out.
+_VEHICLE_CONTROL = re.compile(
+    r"(path[- ]tracking|lane[- ]keeping|"
+    r"\b(?:tire|tyre|tires|tyres)\b|\bsteering\b|"
+    r"yaw[- ](?:rate|moment|stability|control|dynamics)|"
+    r"\bsideslip\b|\bchassis\b|"
+    r"bicycle model|single[- ]track|"
+    r"adaptive cruise|\bcruise control\b|"
+    r"\bwheel slip\b|\bundersteer\b|\boversteer\b|"
+    r"automated vehicle|ground vehicle|"
+    r"vehicle dynamics|electric vehicle)",
     re.I,
 )
 # Non-vehicle robotics. Kept only when the same text also has a strong driving phrase
@@ -68,7 +84,7 @@ def domain_label(p) -> str:
         return "vehicle"
     if _OFF_VEHICLE.search(text):
         return "out"
-    if _WEAK_VEHICLE.search(text):
+    if _WEAK_VEHICLE.search(text) or _VEHICLE_CONTROL.search(text):
         return "vehicle"
     return "out"
 

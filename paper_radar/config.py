@@ -36,6 +36,7 @@ def load_config(path: str | Path, *, check: bool = True) -> dict:
     oa = src.setdefault("openalex", {})
     oa["api_key"] = env("OPENALEX_API_KEY") or oa.get("api_key") or ""
     oa["email"] = env("OPENALEX_EMAIL") or oa.get("email") or ""
+    ds["email"] = env("OPENALEX_EMAIL") or ds.get("email") or oa.get("email") or ""
     journals = src.setdefault("journals", {})
     journals["api_key"] = journals.get("api_key") or oa.get("api_key") or ""
     journals["email"] = journals.get("email") or oa.get("email") or ""

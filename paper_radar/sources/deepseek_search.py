@@ -19,7 +19,7 @@ import logging
 import re
 from datetime import date, timedelta
 from difflib import SequenceMatcher
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import feedparser
 
@@ -54,6 +54,7 @@ DEFAULT_ALLOW = (
     "science.org",
     "ascelibrary.org",
     "journals.sagepub.com",
+    "tandfonline.com",
     "hal.science",
     "semanticscholar.org",
 )
@@ -93,7 +94,12 @@ def fit_query(core: str, suffix: str, limit: int = QUERY_LIMIT) -> str:
 
 
 def queries_for_topic(topic, after: str, n: int = 3) -> list[str]:
-    """Up to three queries: arXiv, journals, and an OpenReview/arXiv variant."""
+    """Base queries, then any topic-specific extras (control sub-topics).
+
+    Extras are appended after the `n` base queries so a cap of 3 still means
+    the arXiv / journal / OpenReview trio. Each extra is a plain keyword
+    string; this function adds the scholarly sites and `after:` date.
+    """
     core = (getattr(topic, "query", None) or getattr(topic, "name", None) or "autonomous driving").strip()
     low = core.lower()
     if "driving" not in low and "vehicle" not in low:
@@ -103,7 +109,15 @@ def queries_for_topic(topic, after: str, n: int = 3) -> list[str]:
         fit_query(core, f"site:ieeexplore.ieee.org OR site:sciencedirect.com after:{after}"),
         fit_query(core, f"site:openreview.net OR site:arxiv.org lang:en after:{after}"),
     ]
-    return built[: max(0, int(n))]
+    out = built[: max(0, int(n))]
+    for extra in getattr(topic, "extra_queries", None) or []:
+        text = " ".join(str(extra).split())
+        if not text:
+            continue
+        q = fit_query(text, f"site:arxiv.org OR site:ieeexplore.ieee.org after:{after}")
+        if q not in out:
+            out.append(q)
+    return out
 
 
 def host_of(url: str) -> str:
@@ -244,6 +258,111 @@ def parse_arxiv_atom(xml: str) -> dict[str, dict]:
     return out
 
 
+def _inverted_abstract(inv) -> str:
+    if not isinstance(inv, dict) or not inv:
+        return ""
+    pos = {}
+    for word, idx in inv.items():
+        if not isinstance(idx, list):
+            continue
+        for i in idx:
+            pos[i] = word
+    if not pos:
+        return ""
+    return " ".join(pos[i] for i in sorted(pos))
+
+
+def biblio_from_openalex(work: dict) -> dict:
+    """Authors, date, venue, and PDF from one OpenAlex work. Empty fields stay empty."""
+    if not isinstance(work, dict):
+        return {}
+    authors = []
+    for row in (work.get("authorships") or [])[:20]:
+        name = ((row or {}).get("author") or {}).get("display_name")
+        if name:
+            authors.append(name)
+    venue = ((work.get("primary_location") or {}).get("source") or {}).get("display_name") or ""
+    if "arxiv" in venue.lower():
+        venue = ""
+    pdf = (work.get("best_oa_location") or {}).get("pdf_url") or ""
+    pdf = str(pdf).strip()
+    if not pdf.lower().startswith(("http://", "https://")):
+        pdf = ""
+    return {
+        "authors": authors,
+        "published": (work.get("publication_date") or "").strip(),
+        "venue": venue,
+        "abstract": _inverted_abstract(work.get("abstract_inverted_index")),
+        "pdf_url": pdf,
+        "doi": norm_doi(work.get("doi")),
+    }
+
+
+def _crossref_date(message: dict) -> str:
+    for key in ("published-print", "published-online", "issued"):
+        parts = ((message.get(key) or {}).get("date-parts") or [None])[0] or []
+        if not parts or not parts[0]:
+            continue
+        year = int(parts[0])
+        month = int(parts[1]) if len(parts) > 1 and parts[1] else 1
+        day = int(parts[2]) if len(parts) > 2 and parts[2] else 1
+        return f"{year:04d}-{month:02d}-{day:02d}"
+    return ""
+
+
+def biblio_from_crossref(message: dict) -> dict:
+    """One Crossref work message (GET /works/{doi}), not a search result list."""
+    if not isinstance(message, dict) or not (message.get("DOI") or message.get("author")):
+        return {}
+    authors = []
+    for row in (message.get("author") or [])[:20]:
+        name = " ".join(x for x in (row.get("given"), row.get("family")) if x).strip()
+        if name:
+            authors.append(name)
+    container = message.get("container-title") or []
+    venue = container[0] if container else ""
+    return {
+        "authors": authors,
+        "published": _crossref_date(message),
+        "venue": venue,
+        "abstract": "",
+        "pdf_url": "",
+        "doi": norm_doi(message.get("DOI")),
+    }
+
+
+def apply_biblio(paper: Paper, info: dict) -> bool:
+    """Fill only blank bibliographic fields. A real abstract is left alone."""
+    if not info:
+        return False
+    changed = False
+    authors = [a for a in (info.get("authors") or []) if a]
+    if authors and not paper.authors:
+        paper.authors = authors
+        changed = True
+    published = (info.get("published") or "").strip()
+    if published and not paper.published:
+        paper.published = published
+        changed = True
+    venue = (info.get("venue") or "").strip()
+    if venue and not paper.venue:
+        paper.venue = venue
+        changed = True
+    pdf = (info.get("pdf_url") or "").strip()
+    if pdf and not paper.pdf_url:
+        paper.pdf_url = pdf
+        changed = True
+    doi = info.get("doi")
+    if doi and not paper.doi:
+        paper.doi = doi
+        changed = True
+    abstract = " ".join((info.get("abstract") or "").split())
+    if abstract and len(paper.abstract or "") < 80 and len(abstract) > len(paper.abstract or ""):
+        paper.abstract = abstract
+        changed = True
+    return changed
+
+
 def apply_arxiv_meta(papers: list[Paper], meta: dict[str, dict]) -> int:
     n = 0
     for p in papers:
@@ -323,12 +442,20 @@ class DeepSeekSearchSource(Source):
             return []
         return [row for row in rows if isinstance(row, dict)]
 
+    def _mailto(self) -> dict:
+        email = (self.scfg.get("email") or "").strip()
+        return {"mailto": email} if email else {}
+
     def _lookup_ids(self, title: str) -> tuple[str | None, str | None]:
-        """OpenAlex, then Crossref. (None, None) when nothing is confident."""
+        aid, doi, _info = self._resolve_title(title)
+        return aid, doi
+
+    def _resolve_title(self, title: str) -> tuple[str | None, str | None, dict]:
+        """OpenAlex, then Crossref. Bibliographic fields come from the same hit."""
         try:
             r = request(
                 "GET", "https://api.openalex.org/works",
-                params={"search": title, "per-page": 1},
+                params={"search": title, "per-page": 1, **self._mailto()},
                 timeout=20, retries=1, backoff=1,
             )
             if r is not None and r.status_code == 200:
@@ -336,22 +463,59 @@ class DeepSeekSearchSource(Source):
                 if results:
                     got = ids_from_openalex(results[0], title)
                     if got and (got[0] or got[1]):
-                        return got
+                        return got[0], got[1], biblio_from_openalex(results[0])
         except Exception as e:  # noqa: BLE001
             log.info("OpenAlex title lookup skipped: %s", e)
         try:
             r = request(
                 "GET", "https://api.crossref.org/works",
-                params={"query.bibliographic": title, "rows": 1},
+                params={"query.bibliographic": title, "rows": 1, **self._mailto()},
+                headers=self._crossref_headers(),
                 timeout=20, retries=1, backoff=1,
             )
             if r is not None and r.status_code == 200:
-                got = ids_from_crossref(r.json().get("message") or {}, title)
+                message = r.json().get("message") or {}
+                got = ids_from_crossref(message, title)
                 if got and (got[0] or got[1]):
-                    return got
+                    item = (message.get("items") or [{}])[0]
+                    return got[0], got[1], biblio_from_crossref(item)
         except Exception as e:  # noqa: BLE001
             log.info("Crossref title lookup skipped: %s", e)
-        return None, None
+        return None, None, {}
+
+    def _crossref_headers(self) -> dict:
+        email = (self.scfg.get("email") or "").strip()
+        agent = f"paper-radar/1.0 (mailto:{email})" if email else "paper-radar/1.0"
+        return {"User-Agent": agent}
+
+    def _biblio_by_doi(self, doi: str) -> dict:
+        """OpenAlex work-by-DOI, then Crossref. One cheap fill for journal hits."""
+        bare = norm_doi(doi)
+        if not bare:
+            return {}
+        try:
+            r = request(
+                "GET", "https://api.openalex.org/works/doi:" + quote(bare, safe="/"),
+                params=self._mailto() or None,
+                timeout=20, retries=1, backoff=1,
+            )
+            if r is not None and r.status_code == 200:
+                info = biblio_from_openalex(r.json())
+                if info.get("authors") or info.get("published"):
+                    return info
+        except Exception as e:  # noqa: BLE001
+            log.info("OpenAlex DOI lookup skipped: %s", e)
+        try:
+            r = request(
+                "GET", "https://api.crossref.org/works/" + quote(bare, safe="/"),
+                headers=self._crossref_headers(),
+                timeout=20, retries=1, backoff=1,
+            )
+            if r is not None and r.status_code == 200:
+                return biblio_from_crossref((r.json() or {}).get("message") or {})
+        except Exception as e:  # noqa: BLE001
+            log.info("Crossref DOI lookup skipped: %s", e)
+        return {}
 
     def _enrich_arxiv(self, papers: list[Paper]) -> None:
         ids = list(dict.fromkeys(p.arxiv_id for p in papers if p.arxiv_id))
@@ -417,7 +581,7 @@ class DeepSeekSearchSource(Source):
                 continue
             lookups += 1
             try:
-                aid, doi = self._lookup_ids(paper.title)
+                aid, doi, info = self._resolve_title(paper.title)
             except Exception as e:  # noqa: BLE001
                 log.info("id lookup crashed: %s", e)
                 continue
@@ -426,9 +590,30 @@ class DeepSeekSearchSource(Source):
                 paper.pdf_url = paper.pdf_url or f"https://arxiv.org/pdf/{aid}"
             if doi and not paper.doi:
                 paper.doi = doi
+            apply_biblio(paper, info)
         try:
             self._enrich_arxiv(out)
         except Exception as e:  # noqa: BLE001
             log.warning("arXiv enrich skipped: %s", e)
+        # Journal hits already carry a DOI, so the title lookup above skipped them.
+        # Fill authors and publication date from that DOI, without touching arXiv papers.
+        meta_used = 0
+        meta_filled = 0
+        meta_limit = int(self.scfg.get("biblio_lookups", 24))
+        for paper in out:
+            if paper.arxiv_id or not paper.doi or meta_used >= meta_limit:
+                continue
+            if paper.authors and paper.published:
+                continue
+            meta_used += 1
+            try:
+                info = self._biblio_by_doi(paper.doi)
+            except Exception as e:  # noqa: BLE001
+                log.info("DOI biblio crashed: %s", e)
+                continue
+            if apply_biblio(paper, info):
+                meta_filled += 1
+        if meta_used:
+            log.info("DeepSeek search DOI biblio lookups=%d filled=%d", meta_used, meta_filled)
         log.info("DeepSeek search requests=%d papers=%d", self.sent, len(out))
         return out

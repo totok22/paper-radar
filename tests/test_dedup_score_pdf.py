@@ -3,7 +3,10 @@ import numpy as np
 from paper_radar.dedup import dedup
 from paper_radar.models import Paper, norm_title
 from paper_radar.pdf import annotate_local, looks_like_pdf, pdf_from_unpaywall, resolve_oa, unpaywall_endpoint
-from paper_radar.rank.score import apply_direction_quota, blend_scores, mmr_select, prefer_control_topic, select_indices
+from paper_radar.rank.score import (
+    apply_direction_quota, blend_scores, has_control_content, lock_control_topics,
+    mmr_select, prefer_control_topic, select_indices,
+)
 from paper_radar.rank.signals import _openreview_summary, compute_basic, in_domain
 from paper_radar.sources.openalex import _to_paper
 
@@ -222,6 +225,7 @@ def test_unpaywall_fills_missing_pdf(monkeypatch):
             return {"best_oa_location": {"url_for_pdf": "https://oa.example.org/paper.pdf"}}
 
     monkeypatch.setattr("paper_radar.pdf.request", lambda *a, **k: Resp())
+    monkeypatch.setattr("paper_radar.pdf.confirm_pdf", lambda *a, **k: True)
     n = resolve_oa([paper], {"pdf": {"email": "me@lab.edu", "unpaywall": True, "lookup_limit": 5}})
     assert n == 1
     assert paper.pdf_url == "https://oa.example.org/paper.pdf"
@@ -232,6 +236,10 @@ def test_unpaywall_fills_missing_pdf(monkeypatch):
     assert looks_like_pdf(
         "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0000217&type=printable"
     )
+    assert looks_like_pdf("https://eprints.example.ac.uk/id/eprint/1/1/paper.pdf#page=2")
+    assert looks_like_pdf("https://repo.example.edu/bitstream/1234/5678/paper")
+    assert looks_like_pdf("https://repo.example.edu/download/file?download=1")
+    assert looks_like_pdf("https://publisher.example/article?pdf=render")
     assert not looks_like_pdf("https://doi.org/10.1/abc")
     assert not looks_like_pdf("https://publisher.example/article")
 
@@ -254,6 +262,7 @@ def test_unpaywall_printable_url_and_bare_doi(monkeypatch):
         return Resp()
 
     monkeypatch.setattr("paper_radar.pdf.request", fake)
+    monkeypatch.setattr("paper_radar.pdf.confirm_pdf", lambda *a, **k: True)
     paper = Paper(
         title="An open vehicle dynamics note",
         doi="https://doi.org/10.1371/journal.pone.0000217",
@@ -291,6 +300,7 @@ def test_openalex_pdf_when_unpaywall_has_none(monkeypatch):
         raise AssertionError(url)
 
     monkeypatch.setattr("paper_radar.pdf.request", fake)
+    monkeypatch.setattr("paper_radar.pdf.confirm_pdf", lambda *a, **k: True)
     paper = Paper(title="Closed-looking IEEE article", doi="10.1109/TIV.2024.1", abstract="a" * 40)
     n = resolve_oa([paper], {"pdf": {"email": "me@lab.edu", "unpaywall": True, "lookup_limit": 5}})
     assert n == 1
@@ -303,6 +313,12 @@ def test_control_near_tie_and_direction_minimum():
     assert prefer_control_topic(row, directions, "Path tracking MPC with a tire model") == 1
     assert prefer_control_topic(row, directions, "Diffusion traffic scenario generation") == 0
     assert prefer_control_topic(np.array([0.90, 0.50, 0.1]), directions, "path tracking") == 0
+    planning = "Lane-change trajectory planning for an autonomous vehicle. We use MPC."
+    prediction = "Diffusion model for trajectory prediction. The ego controller is given."
+    assert not has_control_content(planning)
+    assert not has_control_content(prediction)
+    assert has_control_content("Path tracking controller for an autonomous vehicle. Model predictive control.")
+    assert prefer_control_topic(row, directions, planning) == 0
 
     papers = []
     for i in range(5):
@@ -347,7 +363,8 @@ def test_control_near_tie_and_direction_minimum():
     scores = np.array([0.9, 0.8, 0.7, 0.25, 0.24])
     quota_papers = []
     for i, direction in enumerate(["运动规划", "运动规划", "运动规划", "运动控制", "运动控制"]):
-        p = Paper(title=f"q{i}", abstract="vehicle " * 10)
+        abstract = "path tracking controller " * 4 if direction == "运动控制" else "vehicle lane change " * 4
+        p = Paper(title=f"q{i}", abstract=abstract)
         p.signals["direction"] = direction
         p.emb_score = float(scores[i])
         quota_papers.append(p)

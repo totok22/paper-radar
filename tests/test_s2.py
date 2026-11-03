@@ -164,6 +164,7 @@ def test_hindex_uses_author_batch_only_when_missing(monkeypatch):
     paper = Paper(title="Diffusion traffic scenario generation study", arxiv_id="2401.00001",
                   abstract="x" * 50)
     assert signals.add_author_hindex([paper], "k") == 1
+    assert "externalIds" in calls[0][1] and "openAccessPdf" in calls[0][1]
     assert paper.signals["max_hindex"] == 17
     assert paper.pdf_url == "https://arxiv.org/pdf/2401.00001"
     assert [c[0] for c in calls] == ["paper", "author"]

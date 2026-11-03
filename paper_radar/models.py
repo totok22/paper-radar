@@ -32,6 +32,17 @@ def norm_doi(doi: str | None) -> str | None:
     return d.lower() or None
 
 
+def sanitize_text(text: str | None) -> str:
+    """Strip markdown headings so an abstract cannot break the report or a Feishu card."""
+    if not text:
+        return ""
+    cleaned = text.replace("\r\n", "\n").replace("\r", "\n")
+    cleaned = re.sub(r"(?im)^[ \t]{0,3}#{1,6}[ \t]*abstract:[ \t]*", "", cleaned)
+    cleaned = re.sub(r"(?i)#{1,6}[ \t]*abstract:[ \t]*", "", cleaned)
+    cleaned = re.sub(r"(?m)^[ \t]{0,3}#{1,6}[ \t]+", "", cleaned)
+    return cleaned.strip()
+
+
 def arxiv_from_doi(doi: str | None) -> str | None:
     d = norm_doi(doi) or ""
     m = re.search(r"arxiv\.(\d{4}\.\d{4,5})", d)
@@ -67,6 +78,7 @@ class Paper:
     def __post_init__(self) -> None:
         self.arxiv_id = norm_arxiv(self.arxiv_id)
         self.doi = norm_doi(self.doi)
+        self.abstract = sanitize_text(self.abstract)
         if not self.arxiv_id:
             self.arxiv_id = arxiv_from_doi(self.doi)
 

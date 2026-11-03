@@ -278,6 +278,16 @@ def test_biblio_fills_missing_authors_and_date_only():
     assert cr["authors"] == ["Ann Lee"]
     assert cr["published"] == "2024-07-01"
     assert cr["venue"] == "Control Engineering Practice"
+    from datetime import date
+    from paper_radar.sources.deepseek_search import _crossref_date, sane_date
+    issue = {
+        "published-print": {"date-parts": [[2027, 2, 1]]},
+        "published-online": {"date-parts": [[2025, 11, 1]]},
+    }
+    assert _crossref_date(issue, date(2026, 11, 3)) == "2025-11-01"
+    assert _crossref_date({"issued": {"date-parts": [[2027, 2, 1]]}}, date(2026, 11, 3)) == ""
+    assert sane_date("2999-01-01", date(2026, 11, 3)) == ""
+    assert biblio_from_openalex({"publication_date": "2999-01-01"})["published"] == ""
 
 
 def test_fetch_fills_journal_biblio_by_doi(monkeypatch):

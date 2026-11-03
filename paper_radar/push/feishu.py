@@ -17,6 +17,8 @@ import logging
 import time
 
 from ..http import request
+from ..models import sanitize_text
+from ..pdf import pdf_button_label
 
 log = logging.getLogger("paper_radar")
 COLORS = {"运动规划": "blue", "运动控制": "green", "场景生成": "orange"}
@@ -30,13 +32,18 @@ def sign(secret: str, ts: int) -> str:
 def _buttons(p) -> list[dict]:
     links = []
     if p.pdf_link:
-        links.append(("PDF", p.pdf_link, "primary"))
+        links.append((pdf_button_label(p), p.pdf_link, "primary"))
     if p.arxiv_id:
         links.append(("arXiv", f"https://arxiv.org/abs/{p.arxiv_id}", "default"))
     if p.doi:
         links.append(("DOI", f"https://doi.org/{p.doi}", "default"))
     if p.code_url:
         links.append(("代码", p.code_url, "default"))
+    if not p.pdf_link:
+        for item in p.signals.get("access") or []:
+            label, url = item.get("label"), item.get("url")
+            if label and url:
+                links.append((label, url, "default"))
     actions = []
     for label, url, kind in links:
         actions.append({
@@ -51,7 +58,7 @@ def _buttons(p) -> list[dict]:
 def paper_md(i: int, p, topics) -> str:
     t = topics.get(p.best_topic)
     L = p.llm or {}
-    tldr = (L.get("tldr") or ((p.abstract or "")[:120] + "…"))[:80]
+    tldr = sanitize_text(L.get("tldr") or ((p.abstract or "")[:120] + "…"))[:80]
     score = p.final_score * 10
     badge = "🟢" if score >= 7 else "🔵" if score >= 5 else "⚪"
     flags = []
@@ -81,7 +88,7 @@ def paper_md(i: int, p, topics) -> str:
         f"📝 {tldr}",
     ]
     if L.get("reason"):
-        lines.append(f"💡 {L['reason'][:120]}")
+        lines.append(f"💡 {sanitize_text(L['reason'])[:120]}")
     if not p.pdf_link:
         lines.append("<font color='grey'>暂无开放获取 PDF</font>")
     lines.append(f"<font color='grey'>反馈 `python -m paper_radar feedback like {p.key}`</font>")

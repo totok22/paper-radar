@@ -70,7 +70,7 @@ Settings → Actions → General → Workflow permissions 选 **Read and write**
 每个大方向一张卡片（太长会拆成多张，单条控制在约 18KB，低于自定义机器人 20KB 限制）。每篇有：
 
 - 分数徽章、子方向、中文 TL;DR、为什么推荐
-- **PDF 按钮**：arXiv 为 `https://arxiv.org/pdf/{id}`；期刊论文用 OpenAlex / Unpaywall（按 DOI）/ Semantic Scholar `openAccessPdf` 里真正的 PDF 链接。没有开放获取 PDF 时不编造链接，只保留 DOI
+- **PDF 按钮**：只对最终入选的论文解析，顺序是 arXiv → S2 `externalIds.ArXiv` / `openAccessPdf` → OpenAlex 全部 location → Unpaywall 全部 `oa_locations` → arXiv 标题检索 → DeepSeek（仅当仍没有 PDF）。非 arXiv 链接要做一次 `Range: bytes=0-1023`，正文以 `%PDF` 开头才保留。按钮写成 `PDF (arXiv preprint)` 或 `PDF (accepted)` / `PDF (published)`。没有开放获取 PDF 的期刊论文不编造文件链接，改给 DOI，并在 `institution.enabled` 时加北京理工大学 WebVPN 和 CARSI（IEEE / ScienceDirect PII）
 - arXiv、DOI、代码按钮（摘要或备注里出现 `github.com/owner/repo` 时）
 
 ### 自定义机器人（卡片）
@@ -106,9 +106,9 @@ Settings → Actions → General → Workflow permissions 选 **Read and write**
 1. **召回**：arXiv 全量小类 + 大类关键词；OpenAlex 按子方向检索；ISSN 期刊；S2 用正/负种子做推荐；DeepSeek 网页搜索（见下）。某个源失败只记日志，其他源继续。
 2. **去重**：arXiv id（去掉版本号）、DOI（含 `10.48550/arXiv.…`）、规范化标题、标题模糊匹配。同一篇在多个源出现时合并摘要、PDF 和代码链接。
 3. **道路车辆过滤**：标题和摘要里要能看出是道路上的车（driving / vehicle / traffic / lane / nuPlan / CARLA / Waymo，以及控制论文里常见的 path tracking、tire、steering、yaw-rate、chassis、lane keeping、ACC、electric vehicle）。仓储机器人、机械臂、足式、无人机、没有写明可迁移到驾驶的多机器人，会在预筛前丢掉，也不会拿来填某个方向的空位。这些控制用语只在确认不是机械臂/仓储之后才算数，所以「带 tire 的夹爪」进不来。`min_keep` 只在剩下的车辆论文里保底。
-4. **子方向画像**：描述文本，加上最多几条正种子摘要（缓存过的不再请求）。分数是「画像相似度」和「最接近的种子」的加权，再减去负例（每个子方向都带一段机械臂/仓储/足式负例），然后**取各子方向的最大值**。路径跟踪、MPC、轮胎这类词如果和运动控制只差 `0.12` 以内，就归到运动控制，避免被规划画像抢走。低于 `ranking.min_emb` 的丢掉，但至少保留 `min_keep` 篇领域内论文。另外每个方向按 `direction_keep`（默认 6）用更低的 `direction_min_emb`（默认 0.22）补进 LLM 池，只替换已经超额的方向。
+4. **子方向画像**：描述文本，加上最多几条正种子摘要（缓存过的不再请求）。分数是「画像相似度」和「最接近的种子」的加权，再减去负例（每个子方向都带一段机械臂/仓储/足式负例），然后**取各子方向的最大值**。路径跟踪、MPC、控制器、状态估计、动力学辨识、参数整定，如果和运动控制只差 `0.12` 以内，就归到运动控制。标题是轨迹规划或运动预测的论文不占这个名额，当天没有合格控制论文就留空。低于 `ranking.min_emb` 的丢掉，但至少保留 `min_keep` 篇领域内论文。另外每个方向按 `direction_keep`（默认 6）用更低的 `direction_min_emb`（默认 0.22）补进 LLM 池，只替换已经超额的方向。
 5. **精审**：只评 Top-K。LLM 按批（默认 4 篇）返回 JSON；坏 JSON 会重试，再退回单篇。模型默认 `deepseek-flash`。提示词要求：对象不是道路车辆时相关度给 1–3。相关度低于 `min_relevance`（默认 5）的丢掉。
-6. **质量信号**：arXiv comments 里的录用信息、基准/真车关键词、代码链接、OpenAlex 机构、S2 h-index（`paper/batch`，缺 h-index 才 `author/batch`）、引用数、开放获取 PDF、HF 日榜、OpenReview 公开评分（失败则跳过）。
+6. **质量信号**：arXiv comments 里的录用信息、基准/真车关键词、代码链接、OpenAlex 机构、S2 h-index（同一次 `paper/batch` 也取 `externalIds` 和 `openAccessPdf`，缺 h-index 才 `author/batch`）、引用数、HF 日榜、OpenReview 公开评分（失败则跳过）。PDF 解析放在选出最终名单之后，见上面的按钮说明。
 7. **多样性**：MMR，外加 `exploration_slots`（默认 1）留给还没出现的子方向。最终名单里每个有候选的方向至少 `per_direction_min`（默认 1）篇，运动控制单独至少 `direction_mins.运动控制`（默认 2）篇：从已经超额的方向里换，不增加总篇数。某个方向当天没有领域内候选就留空。空位不会用机械臂或仓储论文去填。
 
 ### DeepSeek 网页搜索
@@ -175,7 +175,8 @@ zotero:
 
 - 没配 LLM key 就没有模型写的中文 TL;DR，DeepSeek 网页搜索也会跳过。
 - 领域过滤看的是标题和摘要。除了 vehicle / driving / traffic，也认 path tracking、tire、steering、yaw-rate、chassis、lane keeping、ACC、electric vehicle。通篇不用这些词的驾驶论文仍会被丢掉。某个方向当天没有领域内候选时，日报里这个方向就是空的。
-- Unpaywall 的请求是 `GET https://api.unpaywall.org/v2/{裸DOI}?email=`。之前把 `url_for_pdf` 要求成以 `.pdf` 结尾，PLOS 这类 `type=printable` 链接被丢掉，所以配了邮箱也会显示 filled=0。现在直接采用 `url_for_pdf`，没有的话再向 OpenAlex 按 DOI 要 `pdf_url`。付费墙论文两边都没有开放获取 PDF 时，卡片只给 DOI。
+- Unpaywall 的请求是 `GET https://api.unpaywall.org/v2/{裸DOI}?email=`。`url_for_pdf` 可以是 `type=printable` 这类不以 `.pdf` 结尾的地址，但入选前会用字节头确认。仓库链接（`/bitstream/`、`?download=1`、`?pdf=render`）同样先确认再放上卡片。没找到 PDF 的结果缓存约 10 天。付费墙论文卡片给 DOI，并可选北京理工大学 WebVPN / CARSI。
+- DeepSeek 或 OpenAlex 补上的发表日期不会使用未来的卷期日期；Crossref 优先 `published-online`。摘要里的 `## Abstract:` 等 Markdown 标题会去掉，避免把日报和卡片拆乱。
 - arXiv 建议 3 秒一次请求；被限流时改抓 `arxiv.org/list/<cat>/new`（只有最近一次公告）。
 - 不配 `S2_API_KEY` 时推荐接口经常 429。限速和退避之后仍失败，就跳过剩余子方向，不影响 arXiv / OpenAlex。
 - OpenAlex 收期刊有几天延迟，`journals.lookback_days` 默认 10 天。

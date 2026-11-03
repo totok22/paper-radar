@@ -36,13 +36,39 @@ def calibrate(sim: np.ndarray) -> np.ndarray:
     return sim / scale
 
 
-_CONTROLISH = re.compile(
-    r"(path[- ]tracking|model predictive control|\bmpc\b|vehicle dynamics|"
-    r"\b(?:tire|tyre)s?\b|\bsteering\b|yaw[- ]|lateral control|longitudinal control|"
-    r"lane[- ]keeping|adaptive cruise|controller (?:gain|parameter|tuning)|"
-    r"learning-based mpc)",
+_CONTROL_SLOT = re.compile(
+    r"(path[- ]tracking|trajectory[- ]tracking|"
+    r"model predictive control|\bmpc\b|"
+    r"\bcontrollers?\b|control law|"
+    r"state estimation|"
+    r"(?:dynamics|parameter|system) identification|"
+    r"parameter (?:tuning|estimation)|"
+    r"lateral control|longitudinal control|"
+    r"learning-based mpc|tracking control)",
     re.I,
 )
+# Title-level planning / prediction. These do not fill the control slot even
+# when the abstract mentions MPC or a controller in passing.
+_NOT_CONTROL_TITLE = re.compile(
+    r"(trajectory planning|motion planning|path planning|"
+    r"lane[- ]change (?:trajectory|planning)|"
+    r"trajectory prediction|motion prediction|behaviou?r prediction)",
+    re.I,
+)
+
+
+def has_control_content(text: str) -> bool:
+    """True for tracking, MPC, a controller, state estimation, or parameter tuning.
+
+    A title that is trajectory planning or motion prediction does not qualify.
+    The control minimum stays empty instead of borrowing those papers.
+    """
+    if not text or not _CONTROL_SLOT.search(text):
+        return False
+    title = text.split(". ", 1)[0]
+    if _NOT_CONTROL_TITLE.search(title):
+        return False
+    return True
 
 
 def prefer_control_topic(scores_row, directions: list[str], text: str, margin: float = 0.12) -> int:
@@ -50,9 +76,10 @@ def prefer_control_topic(scores_row, directions: list[str], text: str, margin: f
 
     Planning profiles also mention trajectories and MPC, so a path-tracking
     paper can lose the argmax by a hair and then never fill the control slot.
+    Planning and prediction titles are not moved.
     """
     best = int(np.argmax(scores_row))
-    if not text or not _CONTROLISH.search(text):
+    if not has_control_content(text):
         return best
     ctrl = [j for j, d in enumerate(directions) if d == "运动控制"]
     if not ctrl:
@@ -80,12 +107,15 @@ def apply_direction_quota(papers, scores: np.ndarray, chosen: list[int], *,
         if float(scores[i]) < floor or float(scores[i]) <= -1e8:
             continue
         d = p.signals.get("direction") or ""
+        if d == "运动控制" and not has_control_content(p.text):
+            continue
         if d:
             pools.setdefault(d, []).append(i)
     for pool in pools.values():
         pool.sort(key=lambda i: -float(scores[i]))
     for d, pool in pools.items():
-        have = [i for i in chosen if (papers[i].signals.get("direction") or "") == d]
+        have = [i for i in chosen if (papers[i].signals.get("direction") or "") == d
+                and not (d == "运动控制" and not has_control_content(papers[i].text))]
         need = per_direction - len(have)
         for i in pool:
             if need <= 0:
@@ -178,9 +208,14 @@ def prefilter(papers, topics, ecfg: dict, top_k: int, store=None,
     directions = [t.direction for t in tlist]
     for i, p in enumerate(papers):
         j = prefer_control_topic(z[i], directions, p.text)
+        if directions[j] == "运动控制" and not has_control_content(p.text):
+            others = [k for k, d in enumerate(directions) if d != "运动控制"]
+            if others:
+                j = max(others, key=lambda k: float(z[i, k]))
         p.emb_scores = {t.id: round(float(sim[i, k]), 4) for k, t in enumerate(tlist)}
         p.best_topic = tlist[j].id
         p.signals["direction"] = tlist[j].direction
+        p.signals["prefilter_topic"] = tlist[j].id
         p.emb_score = float(z[i, j])
         p.signals["off_domain"] = not in_domain(p)
     kept_scores = [p.emb_score for p in papers if not p.signals.get("off_domain")]
@@ -299,7 +334,12 @@ def ensure_direction_minimum(papers, chosen: list[int], *, mins: dict | None, de
     mins = {str(k): int(v) for k, v in (mins or {}).items()}
 
     def eligible(i: int) -> bool:
-        return not papers[i].signals.get("off_domain") and bool(_direction(papers[i]))
+        paper = papers[i]
+        if paper.signals.get("off_domain") or not _direction(paper):
+            return False
+        if _direction(paper) == "运动控制" and not has_control_content(paper.text):
+            return False
+        return True
 
     def count(d: str) -> int:
         return sum(1 for i in chosen if eligible(i) and _direction(papers[i]) == d)
@@ -333,6 +373,37 @@ def ensure_direction_minimum(papers, chosen: list[int], *, mins: dict | None, de
             papers[pick].signals["explore"] = True
             chosen.append(pick)
     return chosen[:n]
+
+
+def lock_control_topics(papers, topics) -> int:
+    """Drop planning/prediction papers that the LLM or the embedder parked on 运动控制."""
+    moved = 0
+    for paper in papers:
+        topic = topics.get(paper.best_topic) if isinstance(topics, dict) else None
+        direction = getattr(topic, "direction", "") or paper.signals.get("direction")
+        if direction != "运动控制" or has_control_content(paper.text):
+            if topic is not None:
+                paper.signals["direction"] = topic.direction
+            continue
+        fallback = paper.signals.get("prefilter_topic") or ""
+        other = topics.get(fallback) if fallback else None
+        if other is None or getattr(other, "direction", "") == "运动控制":
+            best_id, best_score = "", -1e9
+            for key, score in (paper.emb_scores or {}).items():
+                candidate = topics.get(key)
+                if candidate is None or getattr(candidate, "direction", "") == "运动控制":
+                    continue
+                if float(score) > best_score:
+                    best_id, best_score = key, float(score)
+            other = topics.get(best_id) if best_id else None
+        if other is not None:
+            paper.best_topic = other.id
+            paper.signals["direction"] = other.direction
+        else:
+            paper.signals["direction"] = ""
+            paper.signals["control_rejected"] = True
+        moved += 1
+    return moved
 
 
 def mmr_select(papers, vecs, n: int, lam: float = 0.7, per_topic_max: int = 4, exploration: int = 0,

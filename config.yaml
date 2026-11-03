@@ -118,10 +118,24 @@ ranking:
   weights: {relevance: 0.4, novelty: 0.15, rigor: 0.15, embedding: 0.15, quality: 0.15}
 
 pdf:
-  unpaywall: true            # 用 DOI 向 Unpaywall 要开放获取 PDF（邮箱用 OPENALEX_EMAIL / UNPAYWALL_EMAIL）
-  lookup_limit: 20
+  unpaywall: true            # DOI → Unpaywall。邮箱用 OPENALEX_EMAIL / UNPAYWALL_EMAIL
+  lookup_limit: 12           # 只对最终入选的论文做 OA / arXiv / DeepSeek 查询
+  arxiv_title: true          # 没有 arXiv id 时按标题检索 export.arxiv.org（自带 3 秒间隔）
+  deepseek_fallback: true    # 仍无 PDF 时才用 DeepSeek 搜索，查询不超过 128 字符
+  deepseek_limit: 8
+  byte_timeout: 8            # 候选链接做 Range 请求，正文须以 %PDF 开头
+  byte_fail_limit: 3         # 同一域名连续失败这多次后，本次运行不再请求它
+  empty_cache_days: 10       # 没找到 PDF 的缓存过期天数（7–14）
   push_top_n: 5              # 自建应用实际发送的 PDF 篇数（未配置应用则不发送）
   max_bytes: 20971520        # 20MB，低于飞书 30MB 上传限制
+
+# 无开放获取 PDF 的期刊论文：北京理工大学 WebVPN + CARSI。enabled: false 可关。
+institution:
+  enabled: true
+  name: 北京理工大学
+  idp: https://idp.bit.edu.cn/idp/shibboleth
+  webvpn_base: https://webvpn.bit.edu.cn
+  webvpn_key: wrdvpnisthebest!
 
 weekly:
   weekday: 0                 # 周一附带周报；-1 关闭

@@ -26,18 +26,55 @@ TIER2 = ["ICRA", "IROS", "RA-L", "RAL", "Robotics and Automation Letters", "T-IT
          "TPAMI", "Pattern Analysis and Machine Intelligence"]
 TIER3 = ["ITSC", "IV 20", "Intelligent Vehicles Symposium", "WACV", "ACC", "CDC", "L4DC", "Vehicle System Dynamics"]
 ACCEPT = re.compile(r"accept|to appear|published|camera[- ]ready|in proceedings|oral|spotlight", re.I)
-# Keep the digest inside autonomous driving / robotics. "autonomous" alone is too wide
-# (web agents, generic ML). Word boundaries avoid matching "plant" or "explanation".
-_DOMAIN_RE = re.compile(
-    r"\b(driving|driver|drivers|vehicle|vehicles|vehicular|traffic|robot|robots|robotic|robotics|"
-    r"motion|trajectory|trajectories|planner|planning|controller|control|controls|"
-    r"scenario|scenarios|kinematic|kinematics|mpc|carla|nuplan|nuscenes|waymo)\b",
+# On-road vehicles only. "robot", "planning", "MPC", and "control" alone are not enough:
+# they also match warehouse fleets, manipulators, and legged robots, which then clear the
+# embedding floor because those words sit in the topic profiles.
+_STRONG_DRIVING = re.compile(
+    r"(autonomous driving|self[- ]driving|on[- ]road|ego[- ]vehicle|"
+    r"lane[- ](?:change|keeping|changing)|urban driving|highway driving|"
+    r"traffic scenario|driving scenario|autonomous vehicle|"
+    r"\b(?:nuplan|nuscenes|waymo|womd|argoverse|carla|commonroad|metadrive|bench2drive)\b|"
+    r"\bhighway-env\b)",
+    re.I,
+)
+_WEAK_VEHICLE = re.compile(
+    r"\b(driving|driver|drivers|vehicle|vehicles|vehicular|automotive|automobile|"
+    r"car|cars|truck|trucks|motorway|roadway|intersection|highway|lane|traffic)\b",
+    re.I,
+)
+# Non-vehicle robotics. Kept only when the same text also has a strong driving phrase
+# (the method is explicitly carried over to on-road vehicles).
+_OFF_VEHICLE = re.compile(
+    r"(robotic manipulator|robot manipulator|manipulator arm|robotic arm|robot arm|"
+    r"\bgripper\b|\bgrasping\b|end[- ]effector|pick[- ]and[- ]place|bin picking|"
+    r"\bwarehouse\b|fulfillment center|fulfilment centre|"
+    r"\blegged\b|\bhumanoid\b|\bquadruped\b|\bbiped\b|"
+    r"\bdrone\b|\buav\b|unmanned aerial|quadrotor|quadcopter|"
+    r"surgical robot|household robot|domestic robot|mobile manipulator|"
+    r"multi[- ]robot)",
     re.I,
 )
 
 
+def _domain_text(p) -> str:
+    raw = f"{p.title}\n{p.abstract}"
+    return re.sub(r"network traffic", " ", raw, flags=re.I)
+
+
+def domain_label(p) -> str:
+    """`vehicle` or `out`. Transfer into driving still counts as vehicle."""
+    text = _domain_text(p)
+    if _STRONG_DRIVING.search(text):
+        return "vehicle"
+    if _OFF_VEHICLE.search(text):
+        return "out"
+    if _WEAK_VEHICLE.search(text):
+        return "vehicle"
+    return "out"
+
+
 def in_domain(p) -> bool:
-    return bool(_DOMAIN_RE.search(f"{p.title}\n{p.abstract}"))
+    return domain_label(p) == "vehicle"
 
 # Substring match against OpenAlex affiliation strings. Short names are anchored.
 _LABS = (

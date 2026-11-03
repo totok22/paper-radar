@@ -7,12 +7,12 @@
 
 > Daily autonomous-driving paper radar (motion planning / control / scenario generation): multi-source recall → embedding prefilter → LLM review → Feishu push.
 
-每天从 **arXiv / OpenAlex / 目标期刊 / Semantic Scholar 推荐** 召回新论文，去重后按课题组子方向做嵌入预筛（**每个子方向单独打分，取最大**），只把 Top-K 交给 LLM 精审，再叠加刊会、代码、机构、Hugging Face、OpenReview 等质量信号，用 MMR 去冗余并留一个探索位，按「运动规划 / 运动控制 / 场景生成」推到飞书。
+每天从 **arXiv / OpenAlex / 目标期刊 / Semantic Scholar 推荐 / DeepSeek 网页搜索** 召回新论文，去重后按课题组子方向做嵌入预筛（**每个子方向单独打分，取最大**），只把道路车辆相关的 Top-K 交给 LLM 精审，再叠加刊会、代码、机构、Hugging Face、OpenReview 等质量信号，用 MMR 去冗余并留一个探索位，按「运动规划 / 运动控制 / 场景生成」推到飞书。
 
 不依赖 Zotero。兴趣写在 `config.yaml`。以后要接 Zotero，打开配置即可，不必改流水线。
 
 ```
-sources/    arxiv · openalex · journals(ISSN) · semantic_scholar · rss
+sources/    arxiv · openalex · journals(ISSN) · semantic_scholar · deepseek_search · rss
 s2.py       Semantic Scholar 全端点共用 1.1s 限速，优先 paper/batch、author/batch
 interests/  config · feedback · zotero(可选) · seeds
 rank/       embed(API → 本地模型 → TF-IDF，API 向量缓存) · signals · llm · score
@@ -103,12 +103,21 @@ Settings → Actions → General → Workflow permissions 选 **Read and write**
 
 ## 打分（每天大约十几次 S2 请求）
 
-1. **召回**：arXiv 全量小类 + 大类关键词；OpenAlex 按子方向检索；ISSN 期刊；S2 用正/负种子做推荐。某个源失败只记日志，其他源继续。
+1. **召回**：arXiv 全量小类 + 大类关键词；OpenAlex 按子方向检索；ISSN 期刊；S2 用正/负种子做推荐；DeepSeek 网页搜索（见下）。某个源失败只记日志，其他源继续。
 2. **去重**：arXiv id（去掉版本号）、DOI（含 `10.48550/arXiv.…`）、规范化标题、标题模糊匹配。同一篇在多个源出现时合并摘要、PDF 和代码链接。
-3. **子方向画像**：描述文本，加上最多几条正种子摘要（缓存过的不再请求）。分数是「画像相似度」和「最接近的种子」的加权，再减去负例，然后**取各子方向的最大值**。低于 `ranking.min_emb` 的丢掉，但至少保留 `min_keep` 篇，避免空日报。
-4. **精审**：只评 Top-K。LLM 按批（默认 4 篇）返回 JSON；坏 JSON 会重试，再退回单篇。模型默认 `deepseek-flash`。
-5. **质量信号**：arXiv comments 里的录用信息、基准/真车关键词、代码链接、OpenAlex 机构、S2 h-index（`paper/batch`，缺 h-index 才 `author/batch`）、引用数、开放获取 PDF、HF 日榜、OpenReview 公开评分（失败则跳过）。
-6. **多样性**：MMR，外加 `exploration_slots`（默认 1）留给还没出现的子方向。
+3. **道路车辆过滤**：标题和摘要里要能看出是道路上的车（driving / vehicle / traffic / lane / nuPlan / CARLA / Waymo 等）。仓储机器人、机械臂、足式、无人机、没有写明可迁移到驾驶的多机器人，会在预筛前丢掉，也不会拿来填某个方向的空位。`min_keep` 只在剩下的车辆论文里保底，不会把这些论文补回来。
+4. **子方向画像**：描述文本，加上最多几条正种子摘要（缓存过的不再请求）。分数是「画像相似度」和「最接近的种子」的加权，再减去负例（每个子方向都带一段机械臂/仓储/足式负例），然后**取各子方向的最大值**。低于 `ranking.min_emb` 的丢掉，但至少保留 `min_keep` 篇领域内论文，避免空日报。
+5. **精审**：只评 Top-K。LLM 按批（默认 4 篇）返回 JSON；坏 JSON 会重试，再退回单篇。模型默认 `deepseek-flash`。提示词要求：对象不是道路车辆时相关度给 1–3。相关度低于 `min_relevance`（默认 5）的丢掉。
+6. **质量信号**：arXiv comments 里的录用信息、基准/真车关键词、代码链接、OpenAlex 机构、S2 h-index（`paper/batch`，缺 h-index 才 `author/batch`）、引用数、开放获取 PDF、HF 日榜、OpenReview 公开评分（失败则跳过）。
+7. **多样性**：MMR，外加 `exploration_slots`（默认 1）留给还没出现的子方向。空位只从还在池子里的车辆论文里补，不会为了凑方向塞进机械臂或仓储论文。
+
+### DeepSeek 网页搜索
+
+`sources.deepseek_search` 调用 `POST https://api.deepseek.com/v1/tools/search`，鉴权是 `Bearer LLM_API_KEY`（和审稿用同一把密钥，没有单独的 secret）。每个子方向每天大约 3 条查询：`site:arxiv.org`、`site:ieeexplore.ieee.org OR site:sciencedirect.com`，以及一条 OpenReview / arXiv 的英文变体，都带 `after:`（默认今天往前 7 天）和最多 50 条结果。`rerank_score` 低于 `min_rerank_score`（默认 1.0；官方把 ≥1.5 视为高质量）的丢掉。
+
+只保留 `allow_domains` 里的学术站点。CSDN、GitHub、博客和个人主页不在表里，直接丢掉。arXiv 链接会认 `/abs`、`/pdf`、`/html`、版本号和 `#fragment`，然后用 arXiv API 把摘要补全，方便后面的嵌入和 LLM。期刊链接能从 URL 抽出 DOI 就用 DOI；否则按标题问 OpenAlex，不放心再问 Crossref，对不上就只留标题，交给后面的模糊去重。返回字段里的 `date` 可能是抓取时间，不当作发表日期。
+
+搜索按次计费（约 $0.75 / 1000 次成功请求），不按返回条数。`max_requests` 默认 40（11 个子方向 × 3 ≈ 33）。没配 `LLM_API_KEY`、单条查询失败、或额度用完，都只记日志，不影响其他源。
 
 Semantic Scholar 的限速在 `paper_radar/s2.py`：全进程一个时钟，间隔 `min_interval`（1.1 秒），429 读 `Retry-After` 或指数退避，单次运行超过 `max_requests`（300）就停止再请求并继续用已经拿到的数据。种子摘要写在 SQLite 缓存里，第二天不会重复拉。
 
@@ -162,7 +171,8 @@ zotero:
 
 ## 已知限制
 
-- 没配 LLM key 就没有模型写的中文 TL;DR。
+- 没配 LLM key 就没有模型写的中文 TL;DR，DeepSeek 网页搜索也会跳过。
+- 领域过滤看的是标题和摘要里的道路车辆用语。一篇确实在做驾驶、但通篇不写 vehicle / driving / traffic / 常见基准名字的论文会被丢掉。
 - 付费墙论文如果 OpenAlex / Unpaywall / S2 都没有开放获取 PDF，卡片只给 DOI，不会给一个打不开的「PDF」按钮。
 - arXiv 建议 3 秒一次请求；被限流时改抓 `arxiv.org/list/<cat>/new`（只有最近一次公告）。
 - 不配 `S2_API_KEY` 时推荐接口经常 429。限速和退避之后仍失败，就跳过剩余子方向，不影响 arXiv / OpenAlex。

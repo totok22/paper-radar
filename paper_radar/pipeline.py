@@ -99,14 +99,20 @@ def run(cfg: dict, dry_run: bool = False, no_mark: bool = False) -> dict:
     reviewer = LLMReviewer(cfg.get("llm") or {}, topics)
     n_llm = reviewer.review(kept)
     final_scores(kept, rk.get("weights") or {})
+    # Lexical gate first: a high LLM score cannot rescue a warehouse robot or a manipulator.
+    # min_keep already refused to backfill those papers, this is the second check.
     if n_llm:
         floor = float(rk.get("min_relevance", 5))
-        keep_idx = [i for i, p in enumerate(kept) if not p.llm or p.llm.get("heuristic") or p.llm["relevance"] >= floor]
+        keep_idx = [
+            i for i, p in enumerate(kept)
+            if not p.signals.get("off_domain")
+            and (not p.llm or p.llm.get("heuristic") or p.llm.get("relevance", 0) >= floor)
+        ]
         kept = [kept[i] for i in keep_idx]
         vecs = vecs[keep_idx] if vecs is not None and keep_idx else None
     else:
         thr = float(rk.get("min_heuristic", 0.0))
-        keep_idx = [i for i, p in enumerate(kept) if p.final_score >= thr]
+        keep_idx = [i for i, p in enumerate(kept) if not p.signals.get("off_domain") and p.final_score >= thr]
         kept = [kept[i] for i in keep_idx]
         vecs = vecs[keep_idx] if vecs is not None and keep_idx else None
     selected = mmr_select(

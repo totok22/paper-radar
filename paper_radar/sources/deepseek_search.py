@@ -290,7 +290,7 @@ def biblio_from_openalex(work: dict) -> dict:
         pdf = ""
     return {
         "authors": authors,
-        "published": (work.get("publication_date") or "").strip(),
+        "published": sane_date((work.get("publication_date") or "").strip()),
         "venue": venue,
         "abstract": _inverted_abstract(work.get("abstract_inverted_index")),
         "pdf_url": pdf,
@@ -298,15 +298,34 @@ def biblio_from_openalex(work: dict) -> dict:
     }
 
 
-def _crossref_date(message: dict) -> str:
-    for key in ("published-print", "published-online", "issued"):
+def sane_date(iso: str, today: date | None = None) -> str:
+    """Keep YYYY-MM-DD only when it is not in the future. Issue dates often are."""
+    iso = (iso or "").strip()
+    matched = re.match(r"^(\d{4})-(\d{2})-(\d{2})$", iso)
+    if not matched:
+        return ""
+    try:
+        got = date(int(matched.group(1)), int(matched.group(2)), int(matched.group(3)))
+    except ValueError:
+        return ""
+    if got > (today or date.today()):
+        return ""
+    return iso
+
+
+def _crossref_date(message: dict, today: date | None = None) -> str:
+    # published-online is the date the article appeared. published-print / issued
+    # can be a later journal issue (a 2027 cover date on a paper already online).
+    for key in ("published-online", "published-print", "issued"):
         parts = ((message.get(key) or {}).get("date-parts") or [None])[0] or []
         if not parts or not parts[0]:
             continue
         year = int(parts[0])
         month = int(parts[1]) if len(parts) > 1 and parts[1] else 1
         day = int(parts[2]) if len(parts) > 2 and parts[2] else 1
-        return f"{year:04d}-{month:02d}-{day:02d}"
+        kept = sane_date(f"{year:04d}-{month:02d}-{day:02d}", today)
+        if kept:
+            return kept
     return ""
 
 

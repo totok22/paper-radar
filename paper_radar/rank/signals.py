@@ -13,7 +13,7 @@ import re
 from datetime import date, timedelta
 
 from ..http import request
-from ..pdf import annotate_local, looks_like_pdf
+from ..pdf import annotate_local, apply_s2_oa
 from ..s2 import get_client
 
 log = logging.getLogger("paper_radar")
@@ -208,10 +208,7 @@ def _apply_s2_meta(p, d: dict) -> None:
     if isinstance(cites, int):
         p.citation_count = cites
         p.signals["citations"] = cites
-    oa = d.get("openAccessPdf") or {}
-    url = oa.get("url") if isinstance(oa, dict) else None
-    if url and looks_like_pdf(url) and not (p.pdf_url and looks_like_pdf(p.pdf_url)):
-        p.pdf_url = url
+    apply_s2_oa(p, d)
 
 
 def add_author_hindex(papers, api_key: str = "", store=None) -> int:
@@ -221,7 +218,7 @@ def add_author_hindex(papers, api_key: str = "", store=None) -> int:
         return 0
     client = get_client(api_key)
     rows = client.paper_batch(
-        refs, "authors,authors.authorId,authors.hIndex,citationCount,venue,openAccessPdf",
+        refs, "authors,authors.authorId,authors.hIndex,citationCount,venue,externalIds,openAccessPdf",
     )
     by_ref = {ref: d for ref, d in zip(refs, rows) if d}
     need_authors: list[str] = []

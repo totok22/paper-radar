@@ -96,14 +96,29 @@ class Store:
         return self.db.execute("SELECT * FROM feedback").fetchall()
 
     # --- cache -----------------------------------------------------------
-    def cache_get(self, k: str):
-        r = self.db.execute("SELECT v FROM cache WHERE k=?", (k,)).fetchone()
+    def cache_get(self, k: str, max_age_days: float | None = None, *, empty_max_age_days: float | None = None):
+        r = self.db.execute("SELECT v, created_at FROM cache WHERE k=?", (k,)).fetchone()
         if not r:
             return None
         try:
-            return json.loads(r[0])
+            value = json.loads(r[0])
         except json.JSONDecodeError:
             return None
+        age_days = None
+        if r[1]:
+            try:
+                created = datetime.fromisoformat(r[1])
+                if created.tzinfo is None:
+                    created = created.replace(tzinfo=timezone.utc)
+                age_days = (datetime.now(timezone.utc) - created).total_seconds() / 86400
+            except ValueError:
+                age_days = None
+        empty = value in ("", None) or (isinstance(value, dict) and not value.get("url"))
+        if empty and empty_max_age_days is not None and age_days is not None and age_days > empty_max_age_days:
+            return None
+        if max_age_days is not None and age_days is not None and age_days > max_age_days:
+            return None
+        return value
 
     def cache_set(self, k: str, v) -> None:
         self.cache_set_many([(k, v)])

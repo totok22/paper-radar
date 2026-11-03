@@ -4,6 +4,9 @@ from __future__ import annotations
 import html
 from pathlib import Path
 
+from ..models import sanitize_text
+from ..pdf import pdf_button_label
+
 
 def _row(i, p, topics):
     t = topics.get(p.best_topic)
@@ -28,12 +31,15 @@ def _row(i, p, topics):
     if sig:
         parts.append("- " + "；".join(sig))
     if L.get("tldr"):
-        parts.append(f"- 📝 TL;DR：{L['tldr']}")
+        parts.append(f"- 📝 TL;DR：{sanitize_text(L['tldr'])}")
     if L.get("reason"):
-        parts.append(f"- 💡 理由：{L['reason']}")
+        parts.append(f"- 💡 理由：{sanitize_text(L['reason'])}")
     links = []
     if p.pdf_link:
-        links.append(f"[PDF]({p.pdf_link})")
+        links.append(f"[{pdf_button_label(p)}]({p.pdf_link})")
+    for item in (p.signals.get("access") or []) if not p.pdf_link else []:
+        if item.get("label") and item.get("url"):
+            links.append(f"[{item['label']}]({item['url']})")
     if p.arxiv_id:
         links.append(f"[arXiv](https://arxiv.org/abs/{p.arxiv_id})")
     if p.doi:
@@ -44,7 +50,8 @@ def _row(i, p, topics):
         parts.append("- " + " · ".join(links))
     if p.signals.get("explore"):
         parts.append("- 探索位：这条不是纯按分数挤进来的，用来补一个还没被代表的方向")
-    parts.append(f"- 摘要：{p.abstract[:600]}{'…' if len(p.abstract) > 600 else ''}")
+    abstract = sanitize_text(p.abstract)
+    parts.append(f"- 摘要：{abstract[:600]}{'…' if len(abstract) > 600 else ''}")
     parts.append(f"- 反馈：`python -m paper_radar feedback like {p.key}` / `dislike`")
     return "\n".join(parts)
 

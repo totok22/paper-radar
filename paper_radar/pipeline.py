@@ -7,13 +7,13 @@ from collections import OrderedDict
 from .dedup import dedup
 from .interests import build_topics
 from .interests.seeds import enrich_seed_texts
-from .pdf import resolve_oa
+from .pdf import resolve_pdfs
 from .push import feishu
 from .push import feishu_files
 from .push import report
 from .rank import signals as sig
 from .rank.llm import LLMReviewer, fill_heuristic_text
-from .rank.score import final_scores, mmr_select, prefilter
+from .rank.score import final_scores, lock_control_topics, mmr_select, prefilter
 from .s2 import get_client
 from .sources import REGISTRY
 from .store import Store
@@ -93,10 +93,6 @@ def run(cfg: dict, dry_run: bool = False, no_mark: bool = False) -> dict:
             log.warning("OpenReview skipped: %s", e)
     # Recompute venue/institution after S2 may have filled venue, and pick up code links.
     sig.compute_basic(kept)
-    try:
-        resolve_oa(kept, cfg, store)
-    except Exception as e:
-        log.warning("OA pdf lookup skipped: %s", e)
 
     reviewer = LLMReviewer(cfg.get("llm") or {}, topics)
     n_llm = reviewer.review(kept)
@@ -117,6 +113,7 @@ def run(cfg: dict, dry_run: bool = False, no_mark: bool = False) -> dict:
         keep_idx = [i for i, p in enumerate(kept) if not p.signals.get("off_domain") and p.final_score >= thr]
         kept = [kept[i] for i in keep_idx]
         vecs = vecs[keep_idx] if vecs is not None and keep_idx else None
+    lock_control_topics(kept, topics)
     selected = mmr_select(
         kept, vecs, int(rk.get("top_n", 12)), float(rk.get("mmr_lambda", 0.7)),
         int(rk.get("per_topic_max", 3)), int(rk.get("exploration_slots", 1)),
@@ -124,11 +121,18 @@ def run(cfg: dict, dry_run: bool = False, no_mark: bool = False) -> dict:
         per_direction_min=int(rk.get("per_direction_min", 1)),
     )
     fill_heuristic_text(selected, topics)
+    try:
+        resolve_pdfs(selected, cfg, store)
+    except Exception as e:
+        log.warning("PDF resolve skipped: %s", e)
 
     dirs = list(dict.fromkeys(t.direction for t in topics.values()))
     grouped = OrderedDict((d, []) for d in dirs)
     for p in sorted(selected, key=lambda x: -x.final_score):
-        direction = topics[p.best_topic].direction if p.best_topic in topics else "其他"
+        if p.signals.get("control_rejected"):
+            direction = "其他"
+        else:
+            direction = topics[p.best_topic].direction if p.best_topic in topics else "其他"
         grouped.setdefault(direction, []).append(p)
 
     today = shanghai_today()

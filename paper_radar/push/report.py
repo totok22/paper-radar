@@ -12,7 +12,8 @@ def _row(i, p, topics):
              f"- 子方向：{t.direction + ' / ' + t.name if t else p.best_topic}　|　日期：{p.published}　|　来源：{', '.join(p.sources)}",
              f"- 作者：{', '.join(p.authors[:6])}{' 等' if len(p.authors) > 6 else ''}",
              f"- **综合分 {p.final_score * 10:.1f}**　嵌入相关 {s.get('emb_norm', 0):.2f}　质量 {s.get('quality', 0):.2f}"
-             + (f"　LLM: 相关{L['relevance']:.0f} 新颖{L['novelty']:.0f} 实验{L['rigor']:.0f} 入门{L.get('beginner', 0):.0f}" if L else "")]
+             + (f"　LLM: 相关{L['relevance']:.0f} 新颖{L['novelty']:.0f} 实验{L['rigor']:.0f} 入门{L.get('beginner', 0):.0f}"
+                if L and not L.get("heuristic") and "relevance" in L else "")]
     sig = []
     if s.get("venue_name"):
         sig.append(f"刊会: {s['venue_name']}")
@@ -30,6 +31,19 @@ def _row(i, p, topics):
         parts.append(f"- 📝 TL;DR：{L['tldr']}")
     if L.get("reason"):
         parts.append(f"- 💡 理由：{L['reason']}")
+    links = []
+    if p.pdf_link:
+        links.append(f"[PDF]({p.pdf_link})")
+    if p.arxiv_id:
+        links.append(f"[arXiv](https://arxiv.org/abs/{p.arxiv_id})")
+    if p.doi:
+        links.append(f"[DOI](https://doi.org/{p.doi})")
+    if p.code_url:
+        links.append(f"[代码]({p.code_url})")
+    if links:
+        parts.append("- " + " · ".join(links))
+    if p.signals.get("explore"):
+        parts.append("- 探索位：这条不是纯按分数挤进来的，用来补一个还没被代表的方向")
     parts.append(f"- 摘要：{p.abstract[:600]}{'…' if len(p.abstract) > 600 else ''}")
     parts.append(f"- 反馈：`python -m paper_radar feedback like {p.key}` / `dislike`")
     return "\n".join(parts)

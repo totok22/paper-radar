@@ -1,0 +1,60 @@
+name: paper-radar daily
+
+on:
+  schedule:
+    - cron: "30 0 * * *"   # 00:30 UTC = 北京时间 08:30（GitHub 定时可能延迟 5-30 分钟）
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "lookback days (覆盖 config)"
+        required: false
+        default: ""
+      dry_run:
+        description: "只生成报告不推送 (true/false)"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write   # 提交 data/state.sqlite 和 reports/
+
+concurrency:
+  group: paper-radar
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt markdown
+      - name: Run paper-radar
+        env:
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+          FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          S2_API_KEY: ${{ secrets.S2_API_KEY }}
+          OPENALEX_API_KEY: ${{ secrets.OPENALEX_API_KEY }}
+          OPENALEX_EMAIL: ${{ secrets.OPENALEX_EMAIL }}
+          EMBED_API_KEY: ${{ secrets.EMBED_API_KEY }}
+          EMBED_BASE_URL: ${{ secrets.EMBED_BASE_URL }}
+          EMBED_MODEL: ${{ secrets.EMBED_MODEL }}
+        run: |
+          ARGS=""
+          if [ -n "${{ github.event.inputs.days }}" ]; then ARGS="$ARGS --days ${{ github.event.inputs.days }}"; fi
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          python -m paper_radar run $ARGS
+      - name: Commit state & report
+        if: always()
+        run: |
+          git config user.name "paper-radar-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/state.sqlite reports/ || true
+          git diff --cached --quiet || git commit -m "radar: $(date -u +%F) state & report"
+          git push || true

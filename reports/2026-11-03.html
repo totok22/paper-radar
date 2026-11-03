@@ -1,0 +1,62 @@
+<!doctype html><meta charset='utf-8'><title>Paper Radar 2026-11-03</title><body style='max-width:900px;margin:auto;font-family:sans-serif;line-height:1.6'><h1>📡 Paper Radar 日报 2026-11-03</h1>
+<blockquote>
+<p>来源召回：{'arxiv': 164, 'openalex': 87, 'journals': 7, 'semantic_scholar': 28}　→ 去重后 221　→ 嵌入预筛 40　→ 推送 5　|　嵌入: tfidf　评分: LLM(deepseek-chat)</p>
+</blockquote>
+<h2>运动规划（2）</h2>
+<h3>1. <a href="https://doi.org/10.1109/LRA.2026.3730341">Unsupervised Interpretable Human Intent Discovery in Teleoperation via Bayesian Nonparametric Learning and Multi-Modal LLMs</a></h3>
+<ul>
+<li>子方向：运动规划 / 大模型驱动的行为基元库增量式扩展　|　日期：2026-11-01　|　来源：semantic_scholar</li>
+<li>作者：Zhao-Kun Chen, Wen-Shuo Wang, Jun-Qiang Xi</li>
+<li><strong>综合分 5.4</strong>　嵌入相关 0.43　质量 0.41　LLM: 相关6 新颖7 实验5 入门6</li>
+<li>刊会: Robotics and Automation Letters；作者最高 h-index: 6</li>
+<li>📝 TL;DR：用HDP-HSMM分割运动基元，再用VLM+LLM零样本聚类发现并解释遥操作人类意图。</li>
+<li>💡 理由：涉及运动基元分割与LLM语义聚类，与基元库扩展思路相近，但面向遥操作意图发现而非自动驾驶规划，实验仅真实数据无闭环基准。</li>
+<li>摘要：Human intent recognition is crucial for effective robotic teleoperation, yet existing methods rely on a predefined set of intentions, a requirement that is manually intractable in complex open-world scenarios. We propose an unsupervised framework that integrates Bayesian nonparametric learning with multi-modal Large Language Models (LLMs) to autonomously discover and interpret human intentions. We first employ a hierarchical Dirichlet process hidden semi-Markov model (HDP-HSMM) to adaptively segment kinematic sequences into motion primitives, reducing the load on downstream models. Each segmen…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.1109/lra.2026.3730341</code> / <code>dislike</code></li>
+</ul>
+<h3>2. <a href="https://doi.org/10.1109/LRA.2026.3745015">Robust Hybrid Diffusion: Unifying Task Space and Joint Space for Robot Manipulation</a></h3>
+<ul>
+<li>子方向：运动规划 / 基元的扩展与选择 + DMP 算法　|　日期：2026-12-01　|　来源：semantic_scholar</li>
+<li>作者：Shao-Kang Wu, Chen Liu, Yi-Jin Wang, Chuan-Kai Zhang, Lin-Yan Han, Yan-Long Huang</li>
+<li><strong>综合分 5.2</strong>　嵌入相关 0.34　质量 0.41　LLM: 相关6 新颖6 实验5 入门6</li>
+<li>刊会: Robotics and Automation Letters；作者最高 h-index: 7</li>
+<li>📝 TL;DR：融合笛卡尔与关节空间扩散策略，并用DMP保证机器人操作鲁棒性。</li>
+<li>💡 理由：涉及DMP与扩散策略结合，与基元/DMP方向部分相关，但面向机械臂操作而非自动驾驶，实验无驾驶基准，参考价值有限。</li>
+<li>摘要：Diffusion policies have demonstrated strong capability in learning multimodal action distributions in the context of imitation learning. While human demonstrations in general consider both task accuracy and joint configuration simultaneously, existing approaches are typically restricted to either task space or joint space, overlooking the multimodality exhibited in both spaces. To take a pushing task performed by a redundant robot as an example, it is highly desirable for the robot to push an object accurately toward its target while preserving diverse and demonstration-consistent joint-motion…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.1109/lra.2026.3745015</code> / <code>dislike</code></li>
+</ul>
+<h2>运动控制（2）</h2>
+<h3>3. <a href="https://doi.org/10.1109/TCST.2026.3732678">Balancing Tracking and Stability in High-Dynamic Path-Following of 4WD Autonomous Vehicles via MPC With Dynamic Weighting and Slip-Ratio-Constrained Torque Allocation</a></h3>
+<ul>
+<li>子方向：运动控制 / MPC 与车辆控制器部署　|　日期：2026-11-01　|　来源：semantic_scholar</li>
+<li>作者：Chih-Fen Huang, Kang Li</li>
+<li><strong>综合分 6.7</strong>　嵌入相关 0.45　质量 0.43　LLM: 相关9 新颖6 实验6 入门7</li>
+<li>刊会: Control Systems Technology；作者最高 h-index: 11</li>
+<li>📝 TL;DR：基于Bryson规则的MPC动态权重加滑移率约束扭矩分配，提升4WD高速路径跟踪稳定性。</li>
+<li>💡 理由：属MPC路径跟踪与车辆控制部署方向，动态权重与滑移率约束思路清晰，但仅CarSim-Simulink仿真、无实车，入门者可参考MPC权重设计。</li>
+<li>摘要：In path-following control, the core challenge lies in balancing tracking accuracy and vehicle stability as tire force availability depends on vehicle speed, curvature, and road adhesion conditions. To manage this balance in a more adaptive manner, this study presents a path-following control strategy for autonomous four-wheel-drive (4WD) vehicles. Rather than relying on envelope design or fixed input limits, the proposed approach emphasizes dynamic weighting to adjust control priorities in real time. Inspired by Bryson’s Rule, which scales state errors by their allowable ranges, a real-time ad…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.1109/tcst.2026.3732678</code> / <code>dislike</code></li>
+</ul>
+<h3>4. <a href="https://arxiv.org/abs/2610.41477">AC-SMPC: Differentiable Actor--Critic MPC with State Constraints for Safe and Fast Robot Navigation</a></h3>
+<ul>
+<li>子方向：运动控制 / MPC 与车辆控制器部署　|　日期：2026-11-02　|　来源：arxiv</li>
+<li>作者：Chaoran Wu, Jiayu Fan, Qichen Tan, Yuyi Liu, Jin Wang</li>
+<li><strong>综合分 5.2</strong>　嵌入相关 0.36　质量 0.04　LLM: 相关7 新颖6 实验6 入门5</li>
+<li>实验关键词: closed-loop；作者最高 h-index: 8</li>
+<li>📝 TL;DR：带状态约束的可微actor-critic MPC，用松弛变量处理碰撞约束，实现安全快速导航。</li>
+<li>💡 理由：属于可微MPC与学习结合的控制方向，与ctrl_mpc较相关；但面向机器人导航而非自动驾驶，无nuPlan/CARLA等基准，入门参考价值一般。</li>
+<li>摘要：Achieving safe navigation in confined dynamic environments remains a challenging problem, as robots must balance navigation efficiency with safety. Existing actor--critic MPC architectures typically employ differentiable MPC layers, but this way cannot readily accommodate explicit state constraints, making it intractable to involve collision avoidance within learning-based planning. To address this issue, we propose an actor--critic model predictive control framework with state constraints. We first use vertices to represent the robot and obstacles, and half-spaces to represent the workspace. …</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2610.41477</code> / <code>dislike</code></li>
+</ul>
+<h2>场景生成（1）</h2>
+<h3>5. <a href="https://arxiv.org/abs/2610.41772">WorkIng: A Real-World and Synthetic Highway Work-Zone Benchmark Dataset for Autonomous Navigation</a></h3>
+<ul>
+<li>子方向：场景生成 / 场景数据管理、标注与后处理　|　日期：2026-11-02　|　来源：arxiv</li>
+<li>作者：Xujun Xie, Dominik Rößle, Adithya Mohan, Daniel Cremers, Torsten Schön</li>
+<li><strong>综合分 5.2</strong>　嵌入相关 0.36　质量 0.27　LLM: 相关6 新颖5 实验7 入门7</li>
+<li>刊会: WACV；备注: Accepted to WACV 2027. 19 pages including supplementary material. (c) 2027 IEEE. Personal use of this material is permit；实验关键词: carla；作者最高 h-index: 4</li>
+<li>📝 TL;DR：发布真实与CARLA合成的高速施工区多模态基准，含3D标注与24种法规场景。</li>
+<li>💡 理由：属场景数据管理与挖掘（施工区基准数据集），与课题组规划/控制主线关联较弱，但可作为边缘场景数据来源参考，入门者可读。</li>
+<li>摘要：Highway work zones are critical edge cases for autonomous vehicles (AVs), combining atypical geometries and jurisdiction-specific regulations that existing benchmarks fail to capture: real-world datasets lack 360° multi-modal, full-scene 3D work zone annotation, and no single recorded site can span the layouts and regulatory variants needed for generalizable models. We present WorkIng, a dual-domain benchmark and training resource. WorkIng-Highway provides a 360° multi-modal work zone benchmark with synchronized 128-channel LiDAR, six RGB cameras, and RTK-GPS across 32 km, yielding 12,000+ ann…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2610.41772</code> / <code>dislike</code></li>
+</ul></body>

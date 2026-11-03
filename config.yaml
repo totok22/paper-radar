@@ -1,0 +1,207 @@
+# ============ paper-radar 配置 ============
+# 密钥一律走环境变量 / GitHub Secrets，不要写进本文件：
+#   LLM_API_KEY LLM_BASE_URL LLM_MODEL FEISHU_WEBHOOK FEISHU_SECRET
+#   S2_API_KEY OPENALEX_API_KEY OPENALEX_EMAIL EMBED_API_KEY EMBED_BASE_URL EMBED_MODEL
+
+lookback_days: 3            # 召回最近 N 天（周一建议 ≥3 覆盖周末）
+state_db: data/state.sqlite # 已推送历史 + 反馈 + 缓存
+report_dir: reports
+dedup_fuzzy: 0.93           # 标题模糊去重阈值
+
+sources:
+  arxiv:
+    enabled: true
+    full_categories: [cs.RO, eess.SY]          # 全量召回
+    keyword_categories: [cs.CV, cs.LG, cs.AI]  # 大类：只召回含以下关键词的
+    keywords: ["autonomous driving", "self-driving", "autonomous vehicle", "motion planning",
+               "trajectory", "traffic scenario", "driving scenario", "vehicle", "motion primitive",
+               "model predictive control", "safety-critical", "traffic simulation"]
+    page_size: 200
+    max_results: 1500
+  openalex:
+    enabled: true            # 每个子方向用 query 做检索（含期刊/会议正式发表）
+    per_query: 40
+  journals:
+    enabled: true            # 目标期刊新文章（OpenAlex 按 ISSN，替代不稳定的 IEEE RSS）
+    lookback_days: 10
+    max_pages: 3
+    issns:
+      T-ITS: 1524-9050
+      T-IV: 2379-8858
+      RA-L: 2377-3766
+      T-RO: 1552-3098
+      TVT: 0018-9545
+      TCST: 1063-6536
+  semantic_scholar:
+    enabled: true            # S2 推荐：正/负种子 + 你的反馈 → 相似新论文
+    limit: 100
+  rss:
+    enabled: false           # 通用 RSS 插槽
+    feeds: {}
+
+embedding:                   # 预筛：配了 API 用 API；否则 local_model；再否则 TF-IDF
+  # base_url: https://api.siliconflow.cn/v1
+  # model: BAAI/bge-m3
+  local_model: ""            # 例如 BAAI/bge-small-en-v1.5（需 pip install sentence-transformers）
+  negative_weight: 0.5
+
+llm:                         # OpenAI 兼容；无 key 时自动降级为启发式评分
+  base_url: https://api.deepseek.com/v1
+  model: deepseek-chat
+  concurrency: 4
+  json_mode: true
+
+quality:
+  hf_upvotes: true
+  author_hindex: true        # S2 批量查作者 h-index（无 key 可能被限流，失败自动跳过）
+
+ranking:
+  top_k: 40                  # 进入 LLM 精排的数量
+  top_n: 12                  # 最终推送数量
+  per_topic_max: 3
+  mmr_lambda: 0.7            # 越小越多样
+  min_relevance: 5           # LLM 相关度低于此值丢弃
+  weights: {relevance: 0.4, novelty: 0.15, rigor: 0.15, embedding: 0.15, quality: 0.15}
+
+zotero:                      # 可选：以后接 Zotero（pip install pyzotero），见 README
+  enabled: false
+  library_type: user
+  collection_map: {}
+
+# ============ 兴趣子方向（来自课题组方向图） ============
+# positive: 正种子（S2 可识别的 ID：ARXIV:xxxx / DOI:xxx）；negative: 文本或 {id,title}
+topics:
+  # ---------- 运动规划 ----------
+  - id: plan_llm_primitive
+    direction: 运动规划
+    name: 大模型驱动的行为基元库增量式扩展
+    query: large language model autonomous driving behavior decision planning
+    description: >-
+      Using large language models (LLMs) as reasoning/decision makers for autonomous driving motion planning;
+      knowledge-driven driving with memory and reflection; building and incrementally expanding a library of
+      driving behavior primitives / skills (lane change, overtaking, yielding, merging) with LLM reasoning,
+      code generation or continual learning.
+    positive:
+      - {id: "ARXIV:2311.01043", title: "LLM4Drive: A Survey of Large Language Models for Autonomous Driving"}
+      - {id: "ARXIV:2309.16292", title: "DiLu: A Knowledge-Driven Approach to Autonomous Driving with Large Language Models"}
+      - {id: "ARXIV:2307.07162", title: "Drive Like a Human: Rethinking Autonomous Driving with Large Language Models"}
+      - {id: "ARXIV:2310.01415", title: "GPT-Driver: Learning to Drive with GPT"}
+    negative:
+      - "medical question answering large language model benchmark"
+  - id: plan_vlm_scene_behavior
+    direction: 运动规划
+    name: 视觉语言大模型-场景行为映射
+    query: vision language model autonomous driving planning
+    description: >-
+      Vision-language models (VLMs / multimodal LLMs) that map driving scenes (camera images, BEV, scene graphs)
+      to driving behaviors, meta-actions or trajectories; end-to-end driving with VLMs, driving VQA,
+      chain-of-thought reasoning for planning, dual fast/slow systems combining VLM and classical planners.
+    positive:
+      - {id: "ARXIV:2310.14414", title: "Vision Language Models in Autonomous Driving: A Survey and Outlook"}
+      - {id: "ARXIV:2311.12320", title: "A Survey on Multimodal Large Language Models for Autonomous Driving"}
+      - {id: "ARXIV:2402.12289", title: "DriveVLM: The Convergence of Autonomous Driving and Large Vision-Language Models"}
+      - {id: "ARXIV:2312.14150", title: "DriveLM: Driving with Graph Visual Question Answering"}
+      - {id: "ARXIV:2410.23262", title: "EMMA: End-to-End Multimodal Model for Autonomous Driving"}
+      - {id: "ARXIV:2212.10156", title: "Planning-oriented Autonomous Driving (UniAD)"}
+  - id: plan_primitive_dmp
+    direction: 运动规划
+    name: 基元的扩展与选择 + DMP 算法
+    query: dynamical movement primitives trajectory generation
+    description: >-
+      Motion primitives and dynamical movement primitives (DMP): learning, generalization, expansion and
+      selection of primitives from demonstrations; primitive-based trajectory generation and motion planning
+      for vehicles and robots; probabilistic movement primitives; skill libraries and primitive selection.
+    positive:
+      - {id: "DOI:10.1162/NECO_a_00393", title: "Dynamical Movement Primitives: Learning Attractor Models for Motor Behaviors"}
+      - {id: "ARXIV:1604.07446", title: "A Survey of Motion Planning and Control Techniques for Self-driving Urban Vehicles"}
+
+  # ---------- 运动控制 ----------
+  - id: ctrl_scene_similarity_param
+    direction: 运动控制
+    name: 场景相似度驱动的控制参量优化
+    query: scenario adaptive controller parameter tuning autonomous vehicle
+    description: >-
+      Adaptive tuning and optimization of vehicle controller parameters (MPC weights, PID / LQR gains) driven by
+      driving scenario similarity or scenario classification; Bayesian optimization, learning-based or
+      meta-learning based controller parameter adaptation across driving conditions and road scenarios.
+    positive:
+      - {id: "ARXIV:2310.03026", title: "LanguageMPC: Large Language Models as Decision Makers for Autonomous Driving"}
+  - id: ctrl_vlm_scene_param
+    direction: 运动控制
+    name: 视觉语言大模型-场景参量映射
+    query: language model controller parameters MPC autonomous driving
+    description: >-
+      Using LLMs or VLMs to map driving scene understanding to low-level control or planning parameters,
+      e.g. generating MPC cost weights, constraints or controller configurations from language/vision;
+      foundation models interfacing with optimization-based controllers.
+    positive:
+      - {id: "ARXIV:2310.03026", title: "LanguageMPC: Large Language Models as Decision Makers for Autonomous Driving"}
+      - {id: "ARXIV:2402.12289", title: "DriveVLM: The Convergence of Autonomous Driving and Large Vision-Language Models"}
+  - id: ctrl_traj_dynamics_learning
+    direction: 运动控制
+    name: 轨迹特征聚类与动力学参量学习
+    query: vehicle dynamics model learning parameter identification trajectory data
+    description: >-
+      Trajectory feature extraction and clustering of driving data; learning or identifying vehicle dynamics
+      parameters (tire model, cornering stiffness, mass) from data; data-driven / neural vehicle dynamics models,
+      Gaussian-process or physics-informed models for control.
+    positive:
+      - {id: "DOI:10.1109/IVS.2015.7225830", title: "Kinematic and Dynamic Vehicle Models for Autonomous Driving Control Design"}
+  - id: ctrl_mpc
+    direction: 运动控制
+    name: MPC 与车辆控制器部署
+    query: model predictive control autonomous vehicle trajectory tracking
+    description: >-
+      Model predictive control (MPC, nonlinear MPC, learning-based MPC) for autonomous vehicle path tracking and
+      motion control, real-time embedded deployment of vehicle controllers, real-vehicle experiments, bicycle models.
+    positive:
+      - {id: "DOI:10.1109/IVS.2015.7225830", title: "Kinematic and Dynamic Vehicle Models for Autonomous Driving Control Design"}
+      - {id: "ARXIV:1604.07446", title: "A Survey of Motion Planning and Control Techniques for Self-driving Urban Vehicles"}
+
+  # ---------- 场景生成 ----------
+  - id: scen_adversarial
+    direction: 场景生成
+    name: 车辆约束下的对抗场景生成
+    query: adversarial safety-critical scenario generation autonomous driving
+    description: >-
+      Adversarial and safety-critical driving scenario generation for testing autonomous vehicles under vehicle
+      constraints; adversarial agents, corner cases, falsification, reinforcement-learning based scenario search,
+      plausibility of generated accidents.
+    positive:
+      - {id: "ARXIV:2202.02215", title: "A Survey on Safety-Critical Driving Scenario Generation: A Methodological Perspective"}
+      - {id: "ARXIV:2101.06549", title: "AdvSim: Generating Safety-Critical Scenarios for Self-Driving Vehicles"}
+      - {id: "ARXIV:2112.05077", title: "STRIVE: Generating Useful Accident-Prone Driving Scenarios via a Learned Traffic Prior"}
+      - {id: "ARXIV:2204.13683", title: "KING: Generating Safety-Critical Driving Scenarios for Robust Imitation via Kinematics Gradients"}
+  - id: scen_diffusion
+    direction: 场景生成
+    name: 基于扩散模型的动态场景生成
+    query: diffusion model traffic scenario generation
+    description: >-
+      Diffusion models and other generative models for dynamic traffic scenario generation and traffic simulation:
+      multi-agent trajectory generation, scene initialization and rollout, controllable / guided diffusion.
+    positive:
+      - {id: "ARXIV:2210.17366", title: "CTG: Guided Conditional Diffusion for Controllable Traffic Simulation"}
+      - {id: "ARXIV:2305.18452", title: "Generating Driving Scenes with Diffusion"}
+      - {id: "ARXIV:2412.12129", title: "SceneDiffuser: Efficient and Controllable Driving Simulation Initialization and Rollout"}
+    negative:
+      - "text-to-image diffusion image editing portrait"
+  - id: scen_kinematic_constrained
+    direction: 场景生成
+    name: 车辆运动学约束的场景生成
+    query: kinematically feasible trajectory generation traffic simulation
+    description: >-
+      Scenario and trajectory generation that enforces vehicle kinematic / dynamic feasibility constraints,
+      physically plausible multi-agent traffic simulation, rule- or STL-guided generation, differentiable kinematics.
+    positive:
+      - {id: "ARXIV:2204.13683", title: "KING: Generating Safety-Critical Driving Scenarios for Robust Imitation via Kinematics Gradients"}
+      - {id: "ARXIV:2210.17366", title: "CTG: Guided Conditional Diffusion for Controllable Traffic Simulation"}
+  - id: scen_data_management
+    direction: 场景生成
+    name: 场景数据管理、标注与后处理
+    query: driving scenario database extraction annotation
+    description: >-
+      Driving scenario data management: scenario extraction and mining from naturalistic driving data,
+      scenario description languages (OpenSCENARIO), annotation and labeling tools, scenario databases,
+      post-processing software and toolchains for simulation-based testing.
+    positive:
+      - {id: "ARXIV:2202.02215", title: "A Survey on Safety-Critical Driving Scenario Generation: A Methodological Perspective"}

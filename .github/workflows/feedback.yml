@@ -1,0 +1,38 @@
+name: paper-radar feedback
+
+# 在 GitHub 网页/手机 App 上手动触发：Actions → paper-radar feedback → Run workflow
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "like / dislike"
+        required: true
+        default: like
+      target:
+        description: "paper key（飞书卡片里的 arxiv:xxxx）、arXiv ID、DOI"
+        required: true
+      topic:
+        description: "子方向 id（可空）"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  feedback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install -r requirements.txt
+      - run: |
+          T="${{ github.event.inputs.topic }}"
+          python -m paper_radar feedback "${{ github.event.inputs.action }}" "${{ github.event.inputs.target }}" ${T:+--topic "$T"}
+      - run: |
+          git config user.name "paper-radar-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/state.sqlite
+          git diff --cached --quiet || git commit -m "radar: feedback ${{ github.event.inputs.action }} ${{ github.event.inputs.target }}"
+          git push

@@ -26,25 +26,53 @@ def _abstract(inv: dict | None) -> str:
     return " ".join(pos[i] for i in sorted(pos))
 
 
+def _pdf_candidates(w: dict) -> list[str]:
+    urls = []
+    best = w.get("best_oa_location") or {}
+    if best.get("pdf_url"):
+        urls.append(best["pdf_url"])
+    oa = w.get("open_access") or {}
+    if oa.get("oa_url"):
+        urls.append(oa["oa_url"])
+    for loc in w.get("locations") or []:
+        if loc.get("pdf_url"):
+            urls.append(loc["pdf_url"])
+    return urls
+
+
+def _affiliations(w: dict) -> list[str]:
+    names = []
+    for a in w.get("authorships") or []:
+        for inst in a.get("institutions") or []:
+            name = inst.get("display_name")
+            if name and name not in names:
+                names.append(name)
+    return names[:8]
+
+
 def _to_paper(w: dict, src: str) -> Paper:
     doi = (w.get("doi") or "").replace("https://doi.org/", "") or None
     aid = None
+    blob = " ".join(_pdf_candidates(w))
     for loc in w.get("locations") or []:
-        u = (loc.get("landing_page_url") or "") + " " + (loc.get("pdf_url") or "")
-        m = re.search(r"arxiv\.org/(?:abs|pdf)/(\d{4}\.\d{4,5})", u)
-        if m:
-            aid = m.group(1)
-            break
+        blob += " " + (loc.get("landing_page_url") or "")
+    m = re.search(r"arxiv\.org/(?:abs|pdf)/(\d{4}\.\d{4,5})", blob)
+    if m:
+        aid = m.group(1)
     if doi and doi.lower().startswith("10.48550/arxiv."):
         aid = aid or doi.split("arxiv.", 1)[-1].split("v")[0]
     venue = ((w.get("primary_location") or {}).get("source") or {}).get("display_name") or ""
+    pdf = next((u for u in _pdf_candidates(w) if re.search(r"\.pdf($|[?#])|arxiv\.org/pdf/", u or "", re.I)), None)
+    cites = w.get("cited_by_count")
     return Paper(
         title=w.get("title") or w.get("display_name") or "",
         abstract=_abstract(w.get("abstract_inverted_index")),
-        authors=[a["author"]["display_name"] for a in (w.get("authorships") or [])[:20]],
+        authors=[a["author"]["display_name"] for a in (w.get("authorships") or [])[:20] if a.get("author")],
         published=w.get("publication_date") or "",
         url=(w.get("primary_location") or {}).get("landing_page_url") or w.get("id", ""),
         arxiv_id=aid, doi=doi, venue=venue if "arxiv" not in venue.lower() else "",
+        pdf_url=pdf, affiliations=_affiliations(w),
+        citation_count=cites if isinstance(cites, int) else None,
         sources=[src],
     )
 
@@ -58,23 +86,35 @@ class _OpenAlexBase(Source):
             p["mailto"] = self.scfg["email"]
         return p
 
-    def _get(self, params: dict) -> list[dict]:
-        r = request("GET", API, params=self._params(params))
+    def _get(self, params: dict) -> list[dict] | None:
+        r = request("GET", API, params=self._params(params), timeout=25, retries=2, backoff=2)
         if r is None or r.status_code != 200:
             log.warning("OpenAlex failed: %s", None if r is None else f"{r.status_code} {r.text[:120]}")
-            return []
-        return r.json().get("results", [])
+            return None
+        try:
+            return r.json().get("results", [])
+        except ValueError:
+            log.warning("OpenAlex returned non-JSON")
+            return None
 
 
 class OpenAlexSource(_OpenAlexBase):
     name = "openalex"
 
     def fetch(self, topics) -> list[Paper]:
-        out = []
+        out, fails = [], 0
+        limit = int(self.scfg.get("max_failures", 2))
         for t in topics.values():
+            if fails >= limit:
+                log.warning("OpenAlex: repeated failures, skipping remaining topics")
+                break
             q = t.query or t.name
             res = self._get({"search": q, "filter": f"from_publication_date:{self.since.isoformat()}",
                              "sort": "relevance_score:desc"})
+            if res is None:
+                fails += 1
+                continue
+            fails = 0
             out += [_to_paper(w, "openalex") for w in res if w.get("title")]
         return out
 
@@ -94,9 +134,10 @@ class OpenAlexJournalSource(_OpenAlexBase):
         flt = f"primary_location.source.issn:{'|'.join(issns.values())},from_publication_date:{since}"
         out, cursor = [], "*"
         for _ in range(int(self.scfg.get("max_pages", 4))):
-            r = request("GET", API, params=self._params({"filter": flt, "cursor": cursor, "per_page": 200}))
+            r = request("GET", API, params=self._params({"filter": flt, "cursor": cursor, "per_page": 200}),
+                        timeout=25, retries=2, backoff=2)
             if r is None or r.status_code != 200:
-                log.warning("OpenAlex journals failed")
+                log.warning("OpenAlex journals failed: %s", None if r is None else r.status_code)
                 break
             js = r.json()
             out += [_to_paper(w, "journals") for w in js.get("results", []) if w.get("title")]

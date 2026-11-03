@@ -45,6 +45,11 @@ jobs:
           EMBED_API_KEY: ${{ secrets.EMBED_API_KEY }}
           EMBED_BASE_URL: ${{ secrets.EMBED_BASE_URL }}
           EMBED_MODEL: ${{ secrets.EMBED_MODEL }}
+          UNPAYWALL_EMAIL: ${{ secrets.UNPAYWALL_EMAIL }}
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_RECEIVE_ID: ${{ secrets.FEISHU_RECEIVE_ID }}
+          FEISHU_RECEIVE_ID_TYPE: ${{ secrets.FEISHU_RECEIVE_ID_TYPE }}
         run: |
           ARGS=""
           if [ -n "${{ github.event.inputs.days }}" ]; then ARGS="$ARGS --days ${{ github.event.inputs.days }}"; fi

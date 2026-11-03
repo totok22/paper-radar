@@ -9,7 +9,6 @@ from __future__ import annotations
 import html
 import logging
 import re
-import time
 from datetime import datetime
 
 import feedparser
@@ -60,7 +59,6 @@ class ArxivSource(Source):
         for cat in full + kwc:
             r = request("GET", f"https://arxiv.org/list/{cat}/new", params={"skip": 0, "show": 2000},
                         timeout=60, retries=3, backoff=10)
-            time.sleep(3)
             if r is None or r.status_code != 200:
                 log.warning("arXiv listing %s failed", cat)
                 continue
@@ -79,7 +77,6 @@ class ArxivSource(Source):
             r = request("GET", API, params={"search_query": q, "sortBy": "submittedDate", "sortOrder": "descending",
                                             "start": start, "max_results": page},
                         timeout=int(self.scfg.get("timeout", 30)), retries=int(self.scfg.get("retries", 2)), backoff=10)
-            time.sleep(3)  # arXiv API etiquette: <= 1 request / 3 s
             if r is None or r.status_code != 200:
                 log.warning("arXiv request failed (%s) q=%s start=%d", None if r is None else r.status_code, q[:30], start)
                 return out or None
@@ -104,6 +101,7 @@ class ArxivSource(Source):
                     comments=" ".join([e.get("arxiv_comment", ""), e.get("arxiv_journal_ref", "")]).strip(),
                     categories=[t["term"] for t in e.get("tags", [])],
                     sources=["arxiv"],
+                    pdf_url=f"https://arxiv.org/pdf/{aid}",
                 ))
             if stop or len(feed.entries) < page:
                 break
@@ -139,6 +137,7 @@ def parse_listing(text: str, cat: str) -> list[Paper]:
             abstract=_clean(sm.group(1)) if sm else "",
             authors=[_clean(a) for a in re.findall(r">([^<]+)</a>", am.group(1))] if am else [],
             published=pub, url=f"https://arxiv.org/abs/{aid}", arxiv_id=aid,
+            pdf_url=f"https://arxiv.org/pdf/{aid}",
             comments=" ".join(_clean(x.group(1)).replace("Comments:", "").replace("Journal-ref:", "")
                               for x in (cm, jm) if x).strip(),
             categories=[cat], sources=["arxiv"]))

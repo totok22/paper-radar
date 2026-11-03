@@ -5,6 +5,8 @@ import json
 import logging
 import re
 import sys
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from .config import load_config
 from .store import Store
@@ -37,7 +39,35 @@ def _feedback(cfg, args):
         print(f"{'👍' if label > 0 else '👎'} {key} (topic={args.topic or '全部子方向'})")
 
 
+def _normalize_argv(argv):
+    """Accept `-c` / `-v` either before or after the subcommand."""
+    if not argv:
+        return argv
+    moved, rest = [], []
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a in ("-c", "--config") and i + 1 < len(argv):
+            moved.extend((a, argv[i + 1]))
+            i += 2
+            continue
+        if a.startswith("--config="):
+            moved.append(a)
+            i += 1
+            continue
+        if a in ("-v", "--verbose"):
+            moved.append(a)
+            i += 1
+            continue
+        rest.append(a)
+        i += 1
+    return moved + rest
+
+
 def main(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+    argv = _normalize_argv(list(argv))
     ap = argparse.ArgumentParser(prog="paper_radar", description="每日高质量论文雷达 + 飞书推送")
     ap.add_argument("-c", "--config", default="config.yaml")
     ap.add_argument("-v", "--verbose", action="store_true")
@@ -53,6 +83,10 @@ def main(argv=None):
     f.add_argument("--title", help="未推送过的论文可附标题")
     sub.add_parser("recent", help="查看最近推送")
     sub.add_parser("topics", help="查看子方向配置")
+    sub.add_parser("validate", help="检查 config.yaml")
+    w = sub.add_parser("weekly", help="根据已推送历史生成周报")
+    w.add_argument("--dry-run", action="store_true", help="只写报告，不推送飞书")
+    w.add_argument("--days", type=int, default=None, help="覆盖 weekly.days")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                         format="%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
@@ -73,3 +107,17 @@ def main(argv=None):
         from .interests import build_topics
         for t in build_topics(cfg, Store(cfg.get("state_db", "data/state.sqlite"))).values():
             print(f"[{t.direction}] {t.id}: {t.name}  (+{len(t.positive_ids)} / -{len(t.negative_ids)} seeds)")
+    elif args.cmd == "validate":
+        for wmsg in cfg.get("_warnings") or []:
+            print(f"警告: {wmsg}")
+        print(f"配置可用：{len(cfg.get('topics') or [])} 个子方向，LLM 模型 {cfg['llm']['model']}")
+    elif args.cmd == "weekly":
+        from .interests import build_topics
+        from .weekly import maybe_weekly
+        store = Store(cfg.get("state_db", "data/state.sqlite"))
+        if args.days:
+            cfg.setdefault("weekly", {})["days"] = args.days
+        # The subcommand always renders, regardless of which weekday it is.
+        cfg.setdefault("weekly", {})["weekday"] = datetime.now(ZoneInfo("Asia/Shanghai")).weekday()
+        stats = maybe_weekly(cfg, store, build_topics(cfg, store), dry_run=args.dry_run or not cfg.get("feishu", {}).get("webhook"))
+        print(json.dumps(stats or {"papers": 0}, ensure_ascii=False, indent=1))

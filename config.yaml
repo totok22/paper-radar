@@ -34,7 +34,10 @@ sources:
       TCST: 1063-6536
   semantic_scholar:
     enabled: true            # S2 推荐：正/负种子 + 你的反馈 → 相似新论文
-    limit: 100
+    limit: 80                # 每个子方向一条推荐请求（全局限速 1.1s，见 s2.py）
+    min_interval: 1.1        # 账号限额：所有 S2 端点合计 1 req/s
+    max_requests: 300        # 单次运行硬上限，正常一天大约十几次
+    batch_size: 500          # paper/batch、author/batch 每批条数（接口上限 500）
   rss:
     enabled: false           # 通用 RSS 插槽
     feeds: {}
@@ -46,22 +49,39 @@ embedding:                   # 预筛：配了 API 用 API；否则 local_model�
   negative_weight: 0.5
 
 llm:                         # OpenAI 兼容；无 key 时自动降级为启发式评分
-  base_url: https://api.deepseek.com/v1
-  model: deepseek-chat
-  concurrency: 4
+  base_url: https://api.deepseek.com   # 也可写 https://api.deepseek.com/v1
+  model: deepseek-flash                # 本账号可用：deepseek-flash、deepseek-v4-pro
+  batch_size: 4
+  concurrency: 2
+  max_retries: 2
   json_mode: true
 
 quality:
   hf_upvotes: true
-  author_hindex: true        # S2 批量查作者 h-index（无 key 可能被限流，失败自动跳过）
+  author_hindex: true        # S2 paper/batch；缺 h-index 时再走一次 author/batch
+  openreview: true
+  openreview_limit: 8
 
 ranking:
   top_k: 40                  # 进入 LLM 精排的数量
   top_n: 12                  # 最终推送数量
   per_topic_max: 3
-  mmr_lambda: 0.7            # 越小越多样
+  mmr_lambda: 0.72           # 越小越多样
+  exploration_slots: 1       # 留给还没被代表的子方向
+  min_emb: 0.35              # 嵌入分低于此值丢掉；不够 min_keep 时仍保底
+  min_keep: 8
   min_relevance: 5           # LLM 相关度低于此值丢弃
   weights: {relevance: 0.4, novelty: 0.15, rigor: 0.15, embedding: 0.15, quality: 0.15}
+
+pdf:
+  unpaywall: true            # 用 DOI 向 Unpaywall 要开放获取 PDF（邮箱用 OPENALEX_EMAIL / UNPAYWALL_EMAIL）
+  lookup_limit: 20
+  push_top_n: 5              # 自建应用实际发送的 PDF 篇数（未配置应用则不发送）
+  max_bytes: 20971520        # 20MB，低于飞书 30MB 上传限制
+
+weekly:
+  weekday: 0                 # 周一附带周报；-1 关闭
+  days: 7
 
 zotero:                      # 可选：以后接 Zotero（pip install pyzotero），见 README
   enabled: false

@@ -21,6 +21,7 @@ class ConfigInterestSource(InterestSource):
                 direction=t["direction"],
                 description=t.get("description", ""),
                 query=t.get("query", ""),
+                extra_queries=[str(q).strip() for q in (t.get("extra_queries") or []) if str(q).strip()],
                 positive_ids=[p["id"] for p in pos if p.get("id")],
                 positive_texts=[p.get("title", "") for p in pos],
                 negative_ids=[p["id"] for p in neg if isinstance(p, dict) and p.get("id")],

@@ -12,6 +12,7 @@ Non-vehicle robotics never fill that floor or a direction slot.
 from __future__ import annotations
 
 import logging
+import re
 
 import numpy as np
 
@@ -35,6 +36,81 @@ def calibrate(sim: np.ndarray) -> np.ndarray:
     return sim / scale
 
 
+_CONTROLISH = re.compile(
+    r"(path[- ]tracking|model predictive control|\bmpc\b|vehicle dynamics|"
+    r"\b(?:tire|tyre)s?\b|\bsteering\b|yaw[- ]|lateral control|longitudinal control|"
+    r"lane[- ]keeping|adaptive cruise|controller (?:gain|parameter|tuning)|"
+    r"learning-based mpc)",
+    re.I,
+)
+
+
+def prefer_control_topic(scores_row, directions: list[str], text: str, margin: float = 0.12) -> int:
+    """If a vehicle-control paper is nearly tied, keep it on a control topic.
+
+    Planning profiles also mention trajectories and MPC, so a path-tracking
+    paper can lose the argmax by a hair and then never fill the control slot.
+    """
+    best = int(np.argmax(scores_row))
+    if not text or not _CONTROLISH.search(text):
+        return best
+    ctrl = [j for j, d in enumerate(directions) if d == "运动控制"]
+    if not ctrl:
+        return best
+    j = max(ctrl, key=lambda k: float(scores_row[k]))
+    if float(scores_row[j]) >= float(scores_row[best]) - margin:
+        return j
+    return best
+
+
+def apply_direction_quota(papers, scores: np.ndarray, chosen: list[int], *,
+                          per_direction: int, floor: float, cap: int) -> list[int]:
+    """Give each direction a few shortlist seats without admitting off-domain papers.
+
+    Global top-k is dominated by planning. Control papers just under that cut
+    still enter the LLM pool when they clear the softer per-direction floor.
+    """
+    if per_direction <= 0:
+        return list(chosen)
+    chosen = list(chosen)
+    pools: dict[str, list[int]] = {}
+    for i, p in enumerate(papers):
+        if p.signals.get("off_domain"):
+            continue
+        if float(scores[i]) < floor or float(scores[i]) <= -1e8:
+            continue
+        d = p.signals.get("direction") or ""
+        if d:
+            pools.setdefault(d, []).append(i)
+    for pool in pools.values():
+        pool.sort(key=lambda i: -float(scores[i]))
+    for d, pool in pools.items():
+        have = [i for i in chosen if (papers[i].signals.get("direction") or "") == d]
+        need = per_direction - len(have)
+        for i in pool:
+            if need <= 0:
+                break
+            if i in chosen:
+                continue
+            if len(chosen) < cap:
+                chosen.append(i)
+                need -= 1
+                continue
+            donors = []
+            for j in chosen:
+                dj = papers[j].signals.get("direction") or ""
+                n_here = sum(1 for k in chosen if (papers[k].signals.get("direction") or "") == dj)
+                if n_here > per_direction:
+                    donors.append(j)
+            if not donors:
+                break
+            donor = min(donors, key=lambda j: float(scores[j]))
+            chosen.remove(donor)
+            chosen.append(i)
+            need -= 1
+    return chosen
+
+
 def select_indices(scores: np.ndarray, top_k: int, min_emb: float, min_keep: int) -> list[int]:
     # Scores at or below -1e8 are off-domain sentinels and must not refill min_keep.
     order = [int(i) for i in np.argsort(-scores) if float(scores[i]) > -1e8]
@@ -51,7 +127,8 @@ def _seed_texts(topic, limit: int) -> list[str]:
 
 
 def prefilter(papers, topics, ecfg: dict, top_k: int, store=None,
-              min_emb: float = 0.0, min_keep: int = 8):
+              min_emb: float = 0.0, min_keep: int = 8,
+              direction_keep: int = 0, direction_min_emb: float = 0.0):
     """Return (kept papers, their embedding rows)."""
     if not papers:
         prefilter.backend = "none"
@@ -97,13 +174,14 @@ def prefilter(papers, topics, ecfg: dict, top_k: int, store=None,
     has_neg = np.array([True] * len(negatives))
     sim = blend_scores(sim_profile, seed_mean, sim_neg, has_neg, float(ecfg.get("negative_weight", 0.5)))
     z = calibrate(sim)
-    best = z.argmax(axis=1)
     from .signals import in_domain
+    directions = [t.direction for t in tlist]
     for i, p in enumerate(papers):
-        p.emb_scores = {t.id: round(float(sim[i, j]), 4) for j, t in enumerate(tlist)}
-        p.best_topic = tlist[int(best[i])].id
-        p.signals["direction"] = tlist[int(best[i])].direction
-        p.emb_score = float(z[i, best[i]])
+        j = prefer_control_topic(z[i], directions, p.text)
+        p.emb_scores = {t.id: round(float(sim[i, k]), 4) for k, t in enumerate(tlist)}
+        p.best_topic = tlist[j].id
+        p.signals["direction"] = tlist[j].direction
+        p.emb_score = float(z[i, j])
         p.signals["off_domain"] = not in_domain(p)
     kept_scores = [p.emb_score for p in papers if not p.signals.get("off_domain")]
     if kept_scores:
@@ -117,6 +195,10 @@ def prefilter(papers, topics, ecfg: dict, top_k: int, store=None,
             p.signals["emb_norm"] = float(np.clip((p.emb_score - lo) / (hi - lo + 1e-9), 0, 1))
     zs = np.array([-1e9 if p.signals.get("off_domain") else p.emb_score for p in papers], dtype=float)
     idx = select_indices(zs, int(top_k), float(min_emb), int(min_keep))
+    idx = apply_direction_quota(
+        papers, zs, idx, per_direction=int(direction_keep),
+        floor=float(direction_min_emb), cap=max(int(top_k), int(direction_keep)),
+    )
     prefilter.backend = emb.backend
     log.info("embedding backend=%s; prefilter %d -> %d (floor %.2f, keep≥%d, off-domain %d)",
              emb.backend, len(papers), len(idx), float(min_emb), int(min_keep),
@@ -206,8 +288,56 @@ def _cover_directions(papers, chosen: list[int], swaps: int) -> list[int]:
     return chosen
 
 
-def mmr_select(papers, vecs, n: int, lam: float = 0.7, per_topic_max: int = 4, exploration: int = 0):
-    """MMR under a per-topic cap, then a few slots for a missing direction or topic."""
+def ensure_direction_minimum(papers, chosen: list[int], *, mins: dict | None, default_min: int,
+                             n: int) -> list[int]:
+    """Swap surplus papers so each direction with candidates keeps its minimum.
+
+    Off-domain papers are never used to fill a slot. A direction with no
+    surviving candidate stays empty. The list never grows past `n`.
+    """
+    chosen = list(chosen)
+    mins = {str(k): int(v) for k, v in (mins or {}).items()}
+
+    def eligible(i: int) -> bool:
+        return not papers[i].signals.get("off_domain") and bool(_direction(papers[i]))
+
+    def count(d: str) -> int:
+        return sum(1 for i in chosen if eligible(i) and _direction(papers[i]) == d)
+
+    dirs: list[str] = []
+    for i, p in enumerate(papers):
+        d = _direction(p)
+        if eligible(i) and d not in dirs:
+            dirs.append(d)
+    targets = {d: max(0, int(mins.get(d, default_min))) for d in dirs}
+    for d, want in targets.items():
+        guard = 0
+        while count(d) < want and guard < len(papers) + 2:
+            guard += 1
+            pool = [i for i in range(len(papers))
+                    if i not in chosen and eligible(i) and _direction(papers[i]) == d]
+            if not pool:
+                break
+            pool.sort(key=lambda i: (-papers[i].final_score, -papers[i].emb_score))
+            pick = pool[0]
+            if len(chosen) < n:
+                papers[pick].signals["explore"] = True
+                chosen.append(pick)
+                continue
+            donors = [i for i in chosen
+                      if (not eligible(i)) or count(_direction(papers[i])) > targets.get(_direction(papers[i]), 0)]
+            if not donors:
+                break
+            donor = min(donors, key=lambda i: (papers[i].final_score, papers[i].emb_score))
+            chosen.remove(donor)
+            papers[pick].signals["explore"] = True
+            chosen.append(pick)
+    return chosen[:n]
+
+
+def mmr_select(papers, vecs, n: int, lam: float = 0.7, per_topic_max: int = 4, exploration: int = 0,
+               direction_mins: dict | None = None, per_direction_min: int = 0):
+    """MMR under a per-topic cap, then slots so each direction keeps a minimum."""
     if not papers or n <= 0:
         return []
     explore_n = max(0, min(int(exploration), n - 1)) if n > 1 else 0
@@ -229,4 +359,8 @@ def mmr_select(papers, vecs, n: int, lam: float = 0.7, per_topic_max: int = 4, e
         for i in pool[:n - len(chosen)]:
             papers[i].signals["explore"] = True
             chosen.append(i)
-    return [papers[i] for i in chosen]
+    if direction_mins or per_direction_min:
+        chosen = ensure_direction_minimum(
+            papers, chosen, mins=direction_mins, default_min=int(per_direction_min), n=n,
+        )
+    return [papers[i] for i in chosen[:n]]

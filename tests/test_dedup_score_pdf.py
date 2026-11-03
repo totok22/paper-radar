@@ -2,8 +2,8 @@ import numpy as np
 
 from paper_radar.dedup import dedup
 from paper_radar.models import Paper, norm_title
-from paper_radar.pdf import annotate_local, looks_like_pdf, resolve_oa
-from paper_radar.rank.score import blend_scores, mmr_select, select_indices
+from paper_radar.pdf import annotate_local, looks_like_pdf, pdf_from_unpaywall, resolve_oa, unpaywall_endpoint
+from paper_radar.rank.score import apply_direction_quota, blend_scores, mmr_select, prefer_control_topic, select_indices
 from paper_radar.rank.signals import _openreview_summary, compute_basic, in_domain
 from paper_radar.sources.openalex import _to_paper
 
@@ -176,6 +176,28 @@ def test_openalex_pdf_and_quality_signals():
         title="Manipulator primitives transferred to autonomous driving",
         abstract="A robot-arm DMP library is adapted for ego-vehicle lane change on public roads.",
     ))
+    # Control papers often never say "vehicle". Those phrases count only after the
+    # off-vehicle screen, so a gripper that mentions a tire stays out.
+    assert in_domain(Paper(
+        title="Yaw-rate feedback for path tracking",
+        abstract="Steering and a tire model on a chassis with sideslip.",
+    ))
+    assert in_domain(Paper(
+        title="Cornering stiffness from electric vehicle data",
+        abstract="Vehicle dynamics parameter identification for adaptive cruise control.",
+    ))
+    assert not in_domain(Paper(
+        title="Tire-inspired gripper",
+        abstract="A robotic manipulator grasps with a tire-like pad and yaw control of the wrist.",
+    ))
+    assert not in_domain(Paper(
+        title="Warehouse fleet yaw scheduling",
+        abstract="Multi-robot yaw control for a warehouse fleet.",
+    ))
+    assert not in_domain(Paper(
+        title="Soft actor-critic for continuous control",
+        abstract="A generic reinforcement learning policy trained on MuJoCo locomotion.",
+    ))
 
     summary = _openreview_summary({
         "count": 2,
@@ -207,4 +229,129 @@ def test_unpaywall_fills_missing_pdf(monkeypatch):
     annotate_local(landing)
     assert landing.pdf_url is None
     assert looks_like_pdf("https://arxiv.org/pdf/2401.00001")
+    assert looks_like_pdf(
+        "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0000217&type=printable"
+    )
     assert not looks_like_pdf("https://doi.org/10.1/abc")
+    assert not looks_like_pdf("https://publisher.example/article")
+
+
+def test_unpaywall_printable_url_and_bare_doi(monkeypatch):
+    seen = {}
+
+    class Resp:
+        status_code = 200
+        headers = {}
+
+        def json(self):
+            return {"best_oa_location": {
+                "url_for_pdf": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0000217&type=printable",
+            }}
+
+    def fake(method, url, **kw):
+        seen["url"] = url
+        seen["params"] = kw.get("params")
+        return Resp()
+
+    monkeypatch.setattr("paper_radar.pdf.request", fake)
+    paper = Paper(
+        title="An open vehicle dynamics note",
+        doi="https://doi.org/10.1371/journal.pone.0000217",
+        abstract="a" * 40,
+    )
+    n = resolve_oa([paper], {"pdf": {"email": "me@lab.edu", "unpaywall": True, "lookup_limit": 5}})
+    assert n == 1
+    assert "type=printable" in paper.pdf_url
+    assert seen["url"] == unpaywall_endpoint("https://doi.org/10.1371/journal.pone.0000217")
+    assert "/doi.org/" not in seen["url"]
+    assert seen["params"]["email"] == "me@lab.edu"
+    kept = pdf_from_unpaywall({"best_oa_location": {"url_for_pdf": "https://doi.org/10.1/x"}})
+    assert kept is None
+
+
+def test_openalex_pdf_when_unpaywall_has_none(monkeypatch):
+    def fake(method, url, **kw):
+        class Resp:
+            headers = {}
+
+            def __init__(self, code, payload):
+                self.status_code = code
+                self._payload = payload
+
+            def json(self):
+                return self._payload
+
+        if "unpaywall.org" in url:
+            assert kw["params"]["email"] == "me@lab.edu"
+            return Resp(200, {"best_oa_location": {"url_for_pdf": None, "url": "https://doi.org/10.1109/tiv.2024.1"}})
+        if "openalex.org/works/doi:" in url:
+            assert url.endswith("doi:10.1109/tiv.2024.1")
+            assert kw["params"]["mailto"] == "me@lab.edu"
+            return Resp(200, {"best_oa_location": {"pdf_url": "https://publisher.example/getpdf?id=9"}})
+        raise AssertionError(url)
+
+    monkeypatch.setattr("paper_radar.pdf.request", fake)
+    paper = Paper(title="Closed-looking IEEE article", doi="10.1109/TIV.2024.1", abstract="a" * 40)
+    n = resolve_oa([paper], {"pdf": {"email": "me@lab.edu", "unpaywall": True, "lookup_limit": 5}})
+    assert n == 1
+    assert paper.pdf_url == "https://publisher.example/getpdf?id=9"
+
+
+def test_control_near_tie_and_direction_minimum():
+    row = np.array([0.80, 0.70, 0.10])
+    directions = ["运动规划", "运动控制", "场景生成"]
+    assert prefer_control_topic(row, directions, "Path tracking MPC with a tire model") == 1
+    assert prefer_control_topic(row, directions, "Diffusion traffic scenario generation") == 0
+    assert prefer_control_topic(np.array([0.90, 0.50, 0.1]), directions, "path tracking") == 0
+
+    papers = []
+    for i in range(5):
+        p = Paper(title=f"Planning paper {i}", abstract="autonomous driving lane change " * 3)
+        p.signals["direction"] = "运动规划"
+        p.final_score = 10 - i
+        p.emb_score = 0.8
+        p.best_topic = "plan"
+        papers.append(p)
+    for i in range(2):
+        p = Paper(title=f"Control paper {i}", abstract="path tracking steering yaw-rate " * 3)
+        p.signals["direction"] = "运动控制"
+        p.final_score = 1.0 - i * 0.1
+        p.emb_score = 0.3
+        p.best_topic = "ctrl"
+        papers.append(p)
+    warehouse = Paper(title="Warehouse filler", abstract="warehouse multi-robot " * 3)
+    warehouse.signals["direction"] = "运动控制"
+    warehouse.signals["off_domain"] = True
+    warehouse.final_score = 100
+    warehouse.emb_score = 0.99
+    warehouse.best_topic = "ctrl"
+    papers.append(warehouse)
+
+    chosen = mmr_select(
+        papers, None, n=6, lam=1.0, per_topic_max=10, exploration=0,
+        direction_mins={"运动控制": 2}, per_direction_min=1,
+    )
+    ctrl = [p for p in chosen if p.signals.get("direction") == "运动控制"]
+    assert len(chosen) == 6
+    assert len(ctrl) == 2
+    assert all("Warehouse" not in p.title for p in chosen)
+
+    only_plan = papers[:5]
+    stayed = mmr_select(
+        only_plan, None, n=4, lam=1.0, per_topic_max=10, exploration=0,
+        direction_mins={"运动控制": 2}, per_direction_min=1,
+    )
+    assert len(stayed) == 4
+    assert all(p.signals["direction"] == "运动规划" for p in stayed)
+
+    scores = np.array([0.9, 0.8, 0.7, 0.25, 0.24])
+    quota_papers = []
+    for i, direction in enumerate(["运动规划", "运动规划", "运动规划", "运动控制", "运动控制"]):
+        p = Paper(title=f"q{i}", abstract="vehicle " * 10)
+        p.signals["direction"] = direction
+        p.emb_score = float(scores[i])
+        quota_papers.append(p)
+    seated = apply_direction_quota(quota_papers, scores, [0, 1, 2], per_direction=2, floor=0.22, cap=4)
+    seated_dirs = [quota_papers[i].signals["direction"] for i in seated]
+    assert seated_dirs.count("运动控制") == 2
+    assert len(seated) == 4

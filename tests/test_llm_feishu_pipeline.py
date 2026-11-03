@@ -112,6 +112,16 @@ def test_shipped_config_validates():
     assert cfg["sources"]["semantic_scholar"]["max_requests"] <= 400
     assert cfg["sources"]["deepseek_search"]["enabled"] is True
     assert cfg["sources"]["deepseek_search"]["max_requests"] <= 50
+    assert "cs.SY" in cfg["sources"]["arxiv"]["full_categories"]
+    assert "eess.SY" in cfg["sources"]["arxiv"]["full_categories"]
+    issns = cfg["sources"]["journals"]["issns"]
+    assert issns["VSD"] == "0042-3114"
+    assert issns["CEP"] == "0967-0661"
+    assert cfg["ranking"]["direction_mins"]["运动控制"] == 2
+    assert cfg["ranking"]["direction_keep"] >= 2
+    ctrl = [t for t in cfg["topics"] if t["direction"] == "运动控制"]
+    assert len(ctrl) == 4
+    assert all(t.get("extra_queries") for t in ctrl)
     assert any(t["id"] == "scen_diffusion" for t in cfg["topics"])
 
 

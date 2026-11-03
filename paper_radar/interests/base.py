@@ -25,6 +25,7 @@ class Topic:
     positive_texts: list[str] = field(default_factory=list)
     negative_texts: list[str] = field(default_factory=list)
     query: str = ""  # short keyword query for search APIs (OpenAlex)
+    extra_queries: list[str] = field(default_factory=list)  # extra recall queries (control, etc.)
 
     @property
     def profile_text(self) -> str:

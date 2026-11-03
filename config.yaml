@@ -11,11 +11,13 @@ dedup_fuzzy: 0.93           # 标题模糊去重阈值
 sources:
   arxiv:
     enabled: true
-    full_categories: [cs.RO, eess.SY]          # 全量召回
+    full_categories: [cs.RO, eess.SY, cs.SY]   # 全量召回。eess.SY 一直在；cs.SY 补控制系统论文
     keyword_categories: [cs.CV, cs.LG, cs.AI]  # 大类：只召回含以下关键词的
     keywords: ["autonomous driving", "self-driving", "autonomous vehicle", "motion planning",
                "trajectory", "traffic scenario", "driving scenario", "vehicle", "motion primitive",
-               "model predictive control", "safety-critical", "traffic simulation"]
+               "model predictive control", "safety-critical", "traffic simulation",
+               "path tracking", "vehicle dynamics", "tire model", "lateral control",
+               "longitudinal control", "lane keeping", "adaptive cruise"]
     page_size: 200
     max_results: 1500
   openalex:
@@ -32,6 +34,8 @@ sources:
       T-RO: 1552-3098
       TVT: 0018-9545
       TCST: 1063-6536
+      VSD: 0042-3114             # Vehicle System Dynamics（Taylor & Francis）
+      CEP: 0967-0661             # Control Engineering Practice（Elsevier）
   semantic_scholar:
     enabled: true            # S2 推荐：正/负种子 + 你的反馈 → 相似新论文
     limit: 80                # 每个子方向一条推荐请求（全局限速 1.1s，见 s2.py）
@@ -47,8 +51,9 @@ sources:
     count: 50                # 每次 1–50 条；按请求计费，不按条数
     min_rerank_score: 1.0    # 官方把 >=1.5 视为高质量；1.0 多留一些再交给去重和领域过滤
     lookback_days: 7         # 查询里的 after: 日期。返回的 date 可能是抓取时间，不当作发表日期
-    max_requests: 40         # 单次运行搜索请求上限（11 个子方向 × 3 ≈ 33）
+    max_requests: 48         # 11 个子方向 × 3 ≈ 33，再加 4 条运动控制专用查询
     doi_lookups: 20          # 没有 arXiv id / DOI 时，用标题问 OpenAlex，不够再问 Crossref
+    biblio_lookups: 24       # 已有 DOI 但缺作者或日期时，按 DOI 问 OpenAlex / Crossref（不计搜索费）
     base_url: https://api.deepseek.com
     allow_domains:           # 不在表里的站点（博客、CSDN、GitHub、个人主页）直接丢掉
       - arxiv.org
@@ -72,6 +77,7 @@ sources:
       - science.org
       - ascelibrary.org
       - journals.sagepub.com
+      - tandfonline.com
       - hal.science
       - semanticscholar.org
 
@@ -101,6 +107,11 @@ ranking:
   per_topic_max: 3
   mmr_lambda: 0.72           # 越小越多样
   exploration_slots: 1       # 留给还没被代表的子方向
+  direction_keep: 6          # 每个方向在 LLM 池里至少留这么多（更低的嵌入门槛，见下）
+  direction_min_emb: 0.22    # 方向保底用的嵌入门槛，低于全局 min_emb，只换掉已经超额的方向
+  per_direction_min: 1       # 最终日报里每个有候选的方向至少 1 篇
+  direction_mins:            # 运动控制单独要 2 篇；没有合格候选就留空，不用域外论文填
+    运动控制: 2
   min_emb: 0.35              # 嵌入分低于此值丢掉；不够 min_keep 时仍保底
   min_keep: 8
   min_relevance: 5           # LLM 相关度低于此值丢弃
@@ -180,6 +191,8 @@ topics:
       meta-learning based controller parameter adaptation across driving conditions and road scenarios.
     positive:
       - {id: "ARXIV:2310.03026", title: "LanguageMPC: Large Language Models as Decision Makers for Autonomous Driving"}
+    extra_queries:
+      - vehicle controller gain Bayesian optimization scenario adaptive
   - id: ctrl_vlm_scene_param
     direction: 运动控制
     name: 视觉语言大模型-场景参量映射
@@ -191,6 +204,8 @@ topics:
     positive:
       - {id: "ARXIV:2310.03026", title: "LanguageMPC: Large Language Models as Decision Makers for Autonomous Driving"}
       - {id: "ARXIV:2402.12289", title: "DriveVLM: The Convergence of Autonomous Driving and Large Vision-Language Models"}
+    extra_queries:
+      - vision language model MPC weights autonomous vehicle
   - id: ctrl_traj_dynamics_learning
     direction: 运动控制
     name: 轨迹特征聚类与动力学参量学习
@@ -201,6 +216,8 @@ topics:
       Gaussian-process or physics-informed models for control.
     positive:
       - {id: "DOI:10.1109/IVS.2015.7225830", title: "Kinematic and Dynamic Vehicle Models for Autonomous Driving Control Design"}
+    extra_queries:
+      - tire model cornering stiffness vehicle dynamics identification
   - id: ctrl_mpc
     direction: 运动控制
     name: MPC 与车辆控制器部署
@@ -211,6 +228,8 @@ topics:
     positive:
       - {id: "DOI:10.1109/IVS.2015.7225830", title: "Kinematic and Dynamic Vehicle Models for Autonomous Driving Control Design"}
       - {id: "ARXIV:1604.07446", title: "A Survey of Motion Planning and Control Techniques for Self-driving Urban Vehicles"}
+    extra_queries:
+      - learning-based MPC path tracking lateral longitudinal real vehicle
 
   # ---------- 场景生成 ----------
   - id: scen_adversarial

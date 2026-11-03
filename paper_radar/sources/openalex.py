@@ -26,6 +26,21 @@ def _abstract(inv: dict | None) -> str:
     return " ".join(pos[i] for i in sorted(pos))
 
 
+def _oa_pdf(w: dict) -> str | None:
+    """OpenAlex `pdf_url` is a direct PDF even when the link has no `.pdf` suffix."""
+    ordered = []
+    best = (w.get("best_oa_location") or {}).get("pdf_url")
+    if best:
+        ordered.append(best)
+    for loc in w.get("locations") or []:
+        if loc.get("pdf_url"):
+            ordered.append(loc["pdf_url"])
+    for url in ordered:
+        if url and str(url).lower().startswith(("http://", "https://")):
+            return str(url).strip()
+    return None
+
+
 def _pdf_candidates(w: dict) -> list[str]:
     urls = []
     best = w.get("best_oa_location") or {}
@@ -62,7 +77,7 @@ def _to_paper(w: dict, src: str) -> Paper:
     if doi and doi.lower().startswith("10.48550/arxiv."):
         aid = aid or doi.split("arxiv.", 1)[-1].split("v")[0]
     venue = ((w.get("primary_location") or {}).get("source") or {}).get("display_name") or ""
-    pdf = next((u for u in _pdf_candidates(w) if re.search(r"\.pdf($|[?#])|arxiv\.org/pdf/", u or "", re.I)), None)
+    pdf = _oa_pdf(w)
     cites = w.get("cited_by_count")
     return Paper(
         title=w.get("title") or w.get("display_name") or "",
@@ -108,14 +123,21 @@ class OpenAlexSource(_OpenAlexBase):
             if fails >= limit:
                 log.warning("OpenAlex: repeated failures, skipping remaining topics")
                 break
-            q = t.query or t.name
-            res = self._get({"search": q, "filter": f"from_publication_date:{self.since.isoformat()}",
-                             "sort": "relevance_score:desc"})
-            if res is None:
+            queries = [t.query or t.name, *list(getattr(t, "extra_queries", None) or [])]
+            topic_failed = False
+            for i, q in enumerate(queries):
+                res = self._get({"search": q, "filter": f"from_publication_date:{self.since.isoformat()}",
+                                 "sort": "relevance_score:desc"})
+                if res is None:
+                    # Only the primary query spends the failure budget. Extras are optional.
+                    if i == 0:
+                        topic_failed = True
+                    continue
+                out += [_to_paper(w, "openalex") for w in res if w.get("title")]
+            if topic_failed:
                 fails += 1
                 continue
             fails = 0
-            out += [_to_paper(w, "openalex") for w in res if w.get("title")]
         return out
 
 

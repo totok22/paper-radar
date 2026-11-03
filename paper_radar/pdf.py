@@ -9,14 +9,21 @@ from __future__ import annotations
 
 import logging
 import re
+from urllib.parse import quote
 
 from .http import request
-from .models import Paper
+from .models import Paper, norm_doi
 
 log = logging.getLogger("paper_radar")
 
 _GH = re.compile(r"https?://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", re.I)
-_PDFISH = re.compile(r"(\.pdf($|[?#]))|arxiv\.org/pdf/|openreview\.net/pdf", re.I)
+# Publisher OA links often have no ".pdf" suffix (PLOS type=printable, IEEE getPDF).
+_PDFISH = re.compile(
+    r"(\.pdf($|[?#]))|arxiv\.org/pdf/|openreview\.net/pdf|"
+    r"/pdf(?:/|\?|$)|type=printable|getpdf|stamppdf|application/pdf",
+    re.I,
+)
+_DOI_PAGE = re.compile(r"^https?://(?:dx\.)?doi\.org/", re.I)
 
 
 def looks_like_pdf(url: str | None) -> bool:
@@ -37,6 +44,35 @@ def _clean_pdf(url: str | None) -> str | None:
     return u if looks_like_pdf(u) else None
 
 
+def unpaywall_endpoint(doi: str) -> str | None:
+    """Bare DOI in the path. A `https://doi.org/` prefix makes Unpaywall 404."""
+    bare = norm_doi(doi)
+    if not bare:
+        return None
+    return "https://api.unpaywall.org/v2/" + quote(bare, safe="/")
+
+
+def pdf_from_unpaywall(data: dict) -> str | None:
+    """`url_for_pdf` is the PDF even when the URL does not end in .pdf."""
+    if not isinstance(data, dict):
+        return None
+    candidates = []
+    best = data.get("best_oa_location") or {}
+    if best.get("url_for_pdf"):
+        candidates.append(best["url_for_pdf"])
+    for loc in data.get("oa_locations") or []:
+        if isinstance(loc, dict) and loc.get("url_for_pdf"):
+            candidates.append(loc["url_for_pdf"])
+    for url in candidates:
+        u = str(url).strip()
+        if u.lower().startswith(("http://", "https://")) and not _DOI_PAGE.search(u):
+            return u
+    for loc in [best, *(data.get("oa_locations") or [])]:
+        if isinstance(loc, dict) and looks_like_pdf(loc.get("url")):
+            return loc["url"].strip()
+    return None
+
+
 def annotate_local(p: Paper) -> None:
     """Fill arXiv PDF and a GitHub code link from text already on the paper."""
     cleaned = _clean_pdf(p.pdf_url)
@@ -52,21 +88,42 @@ def annotate_local(p: Paper) -> None:
 
 
 def _unpaywall_pdf(doi: str, email: str) -> str | None:
-    r = request("GET", f"https://api.unpaywall.org/v2/{doi}", params={"email": email}, retries=2, timeout=25)
+    url = unpaywall_endpoint(doi)
+    if not url or not email:
+        return None
+    r = request("GET", url, params={"email": email}, retries=2, timeout=25)
     if r is None or r.status_code != 200:
+        if r is not None and r.status_code in (401, 422):
+            log.warning("Unpaywall rejected the email (%s). Set OPENALEX_EMAIL or UNPAYWALL_EMAIL.", r.status_code)
+        elif r is not None and r.status_code != 404:
+            log.info("Unpaywall HTTP %s for %s", r.status_code, doi)
         return None
     try:
         data = r.json()
     except ValueError:
         return None
-    best = data.get("best_oa_location") or {}
-    url = _clean_pdf(best.get("url_for_pdf"))
-    if url:
-        return url
-    for loc in data.get("oa_locations") or []:
-        url = _clean_pdf(loc.get("url_for_pdf"))
-        if url:
-            return url
+    return pdf_from_unpaywall(data)
+
+
+def _openalex_pdf_by_doi(doi: str, email: str) -> str | None:
+    """Fallback when Unpaywall has no url_for_pdf. OpenAlex `pdf_url` is a direct file."""
+    bare = norm_doi(doi)
+    if not bare:
+        return None
+    params = {"mailto": email} if email else None
+    r = request(
+        "GET", "https://api.openalex.org/works/doi:" + quote(bare, safe="/"),
+        params=params, retries=1, timeout=20, backoff=1,
+    )
+    if r is None or r.status_code != 200:
+        return None
+    try:
+        work = r.json()
+    except ValueError:
+        return None
+    pdf = (work.get("best_oa_location") or {}).get("pdf_url")
+    if pdf and str(pdf).lower().startswith(("http://", "https://")) and not _DOI_PAGE.search(str(pdf)):
+        return str(pdf).strip()
     return None
 
 
@@ -88,10 +145,17 @@ def resolve_oa(papers: list[Paper], cfg: dict, store=None) -> int:
             continue
         if not p.doi or looked >= limit:
             continue
-        key = f"unpaywall:{p.doi}"
+        # v2: previous runs cached "" when url_for_pdf had no ".pdf" suffix.
+        key = f"oa-pdf:v2:{norm_doi(p.doi) or p.doi}"
         cached = store.cache_get(key) if store is not None else None
         if cached is None:
             cached = _unpaywall_pdf(p.doi, email) or ""
+            if not cached:
+                try:
+                    cached = _openalex_pdf_by_doi(p.doi, email) or ""
+                except Exception as e:  # noqa: BLE001
+                    log.info("OpenAlex PDF lookup skipped: %s", e)
+                    cached = ""
             if store is not None:
                 store.cache_set(key, cached)
             looked += 1

@@ -1,5 +1,12 @@
 # paper-radar：自动驾驶方向每日论文雷达
 
+[![daily](https://github.com/totok22/paper-radar/actions/workflows/daily.yml/badge.svg)](https://github.com/totok22/paper-radar/actions/workflows/daily.yml)
+[![tests](https://github.com/totok22/paper-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/totok22/paper-radar/actions/workflows/ci.yml)
+![python](https://img.shields.io/badge/python-3.11-blue)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+> Daily autonomous-driving paper radar (motion planning / control / scenario generation): multi-source recall → embedding prefilter → LLM review → Feishu push.
+
 每天从 **arXiv / OpenAlex / 目标期刊 / Semantic Scholar 推荐** 召回新论文，去重后按课题组子方向做嵌入预筛（**每个子方向单独打分，取最大**），只把 Top-K 交给 LLM 精审，再叠加刊会、代码、机构、Hugging Face、OpenReview 等质量信号，用 MMR 去冗余并留一个探索位，按「运动规划 / 运动控制 / 场景生成」推到飞书。
 
 不依赖 Zotero。兴趣写在 `config.yaml`。以后要接 Zotero，打开配置即可，不必改流水线。
@@ -54,7 +61,7 @@ python -m paper_radar run                        # 真正推送，需要 FEISHU_
 
 Settings → Actions → General → Workflow permissions 选 **Read and write**（把 `data/state.sqlite` 和 `reports/` 提交回去）。
 
-手动验证：Actions → paper-radar daily → Run workflow，`dry_run` 填 **true**。这一步只写报告和卡片 JSON，**不会**调用飞书 webhook，也**不会**上传 PDF。日志里的 `stats` 应包含 `per_source`、`selected`、`with_pdf`、`s2_requests`。确认报告没问题后，再用 `dry_run=false` 正式推送。
+手动验证：Actions → paper-radar daily → Run workflow，`dry_run` 填 **true**。这一步只写报告和卡片 JSON，**不会**调用飞书 webhook，也**不会**上传 PDF。日志里的 `stats` 应包含 `per_source`、`selected`、`with_pdf`、`s2_requests`。确认报告没问题后，再用 `dry_run=false` 正式推送。dry-run 的报告和卡片 JSON 作为 Actions artifact 上传（保留 14 天），**不会**提交 `data/state.sqlite`，所以不会把论文记成已推送。
 
 `workflow_dispatch` 的 `days` 仍可临时覆盖 `lookback_days`。
 
@@ -160,3 +167,7 @@ zotero:
 - arXiv 建议 3 秒一次请求；被限流时改抓 `arxiv.org/list/<cat>/new`（只有最近一次公告）。
 - 不配 `S2_API_KEY` 时推荐接口经常 429。限速和退避之后仍失败，就跳过剩余子方向，不影响 arXiv / OpenAlex。
 - OpenAlex 收期刊有几天延迟，`journals.lookback_days` 默认 10 天。
+
+## License
+
+MIT，见 [LICENSE](LICENSE)。

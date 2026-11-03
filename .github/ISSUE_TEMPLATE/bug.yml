@@ -1,0 +1,15 @@
+name: 运行出错 / Bug
+description: 每日任务失败、推送异常或结果明显不对
+labels: [bug]
+body:
+  - type: input
+    id: run
+    attributes:
+      label: Actions run 链接
+  - type: textarea
+    id: what
+    attributes:
+      label: 现象
+      description: 报错日志片段（不要贴任何 key / webhook）
+    validations:
+      required: true

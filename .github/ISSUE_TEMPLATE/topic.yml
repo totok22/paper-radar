@@ -1,0 +1,14 @@
+name: 调整方向 / 推荐质量
+description: 推荐跑偏、想新增或修改子方向、种子论文
+labels: [tuning]
+body:
+  - type: textarea
+    id: papers
+    attributes:
+      label: 涉及的论文（标题 / arXiv ID / DOI）
+  - type: textarea
+    id: want
+    attributes:
+      label: 希望怎么调整
+    validations:
+      required: true

@@ -1,5 +1,31 @@
+# Python
 .venv/
+venv/
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Secrets / local config — never commit keys
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Runtime artifacts
 reports/*.feishu.json
+data/*.sqlite-journal
+data/*.sqlite-wal
+data/*.sqlite-shm
+*.log
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -422,7 +422,7 @@ class DeepSeekSearchSource(Source):
         return list(DEFAULT_ALLOW)
 
     def _after(self) -> str:
-        days = int(self.scfg.get("lookback_days", 7))
+        days = self.window_days(minimum=7)
         try:
             today = date.fromisoformat(shanghai_today())
         except ValueError:

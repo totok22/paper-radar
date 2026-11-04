@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import date, timedelta
 
 from ..pdf import looks_like_pdf
 from ..models import Paper
@@ -38,10 +39,14 @@ class S2RecommendSource(Source):
 
     def fetch(self, topics) -> list[Paper]:
         client = get_client(self.scfg.get("api_key") or "")
-        since = self.since.isoformat()
+        # Recommendations are usually months old; a daily 3-day window would
+        # throw almost all of them away, so this source has its own window.
+        days = int(self.scfg.get("lookback_days", max(self.days, 14)))
+        since = (date.today() - timedelta(days=days)).isoformat()
+        retries = int(self.scfg.get("retries", 2))
         out, fails = [], 0
         seen_queries: set[tuple] = set()
-        max_failures = int(self.scfg.get("max_failures", 3))
+        max_failures = int(self.scfg.get("max_failures", 2))
         for t in topics.values():
             if fails >= max_failures:
                 log.warning("S2 recs: too many failures, skipping remaining topics")
@@ -59,6 +64,7 @@ class S2RecommendSource(Source):
                 "POST", REC,
                 params={"fields": FIELDS, "limit": int(self.scfg.get("limit", 100))},
                 json={"positivePaperIds": pos, "negativePaperIds": neg},
+                retries=retries,
             )
             if r is None or r.status_code != 200:
                 log.warning("S2 recs failed for %s: %s", t.id, None if r is None else r.status_code)

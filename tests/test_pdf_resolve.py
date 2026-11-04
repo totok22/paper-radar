@@ -174,7 +174,8 @@ def test_hal_fills_pdf_and_unverifiable_is_not_cached(tmp_path, monkeypatch):
         raise AssertionError(url)
 
     monkeypatch.setattr("paper_radar.pdf.request", fake)
-    monkeypatch.setattr("paper_radar.pdf.confirm_pdf", lambda *a, **k: True)
+    # HAL file URLs are trusted by shape: the byte check only sees the JS wall.
+    monkeypatch.setattr("paper_radar.pdf.confirm_pdf", lambda *a, **k: False)
     paper = Paper(
         title="Robust Robot Planning for Human-Robot Collaboration",
         doi="10.1109/ICRA48891.2023.10161406",

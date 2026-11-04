@@ -323,6 +323,14 @@ def hal_pdf_url(doc: dict) -> str | None:
     return None
 
 
+def is_trusted_pdf_url(url: str) -> bool:
+    """HAL file URLs are real PDFs behind a proof-of-work wall a bot cannot clear."""
+    host = (urlparse(url).hostname or "").lower()
+    if not (host == "hal.science" or host.endswith(".hal.science")):
+        return False
+    return bool(re.search(r"(/document|/file/[^?#]+\.pdf)(?:$|[?#])", url, re.I))
+
+
 def same_work(doi: str, title: str, paper: Paper) -> bool:
     """Guard against DOI/title search returning a neighbour."""
     got = norm_doi(doi)
@@ -572,7 +580,7 @@ class _Resolver:
         if key and self.store is not None:
             self.store.cache_set(key, payload)
 
-    def _accept(self, p: Paper, url: str, source: str, version: str, trusted: bool = False) -> bool:
+    def _accept(self, p: Paper, url: str, source: str, version: str) -> bool:
         url = normalize_pdf_url(url)
         if not url or _DOI_PAGE.search(url):
             return False
@@ -585,9 +593,8 @@ class _Resolver:
         if p.arxiv_id and (aid or "arxiv.org" in url):
             _set_pdf(p, f"https://arxiv.org/pdf/{p.arxiv_id}", source, "preprint")
             return True
-        if trusted:
-            # HAL file links sit behind a JS proof-of-work wall that a browser
-            # clears but a bot cannot. The shape is known, so skip the byte check.
+        if is_trusted_pdf_url(url):
+            # A browser clears HAL's JS challenge; a bot only sees the HTML wall.
             _set_pdf(p, url, source, version)
             return True
         ok = confirm_pdf(url, self.breaker, self.timeout)
@@ -692,7 +699,7 @@ class _Resolver:
                 continue
             url = hal_pdf_url(doc)
             if url and re.search(r"(\.pdf($|\?)|/document($|\?))", url, re.I):
-                if self._accept(p, url, "hal", "", trusted=True):
+                if self._accept(p, url, "hal", ""):
                     return True
         return False
 

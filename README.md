@@ -2,7 +2,7 @@
 
 [![daily](https://github.com/totok22/paper-radar/actions/workflows/daily.yml/badge.svg)](https://github.com/totok22/paper-radar/actions/workflows/daily.yml)
 [![tests](https://github.com/totok22/paper-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/totok22/paper-radar/actions/workflows/ci.yml)
-![python](https://img.shields.io/badge/python-3.11-blue)
+![python](https://img.shields.io/badge/python-3.12-blue)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 > Daily autonomous-driving paper radar (motion planning / control / scenario generation): multi-source recall → embedding prefilter → LLM review → Feishu push.

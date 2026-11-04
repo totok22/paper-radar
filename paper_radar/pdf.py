@@ -6,13 +6,14 @@ Waterfall for the papers that will actually be pushed:
 2. Semantic Scholar ``externalIds.ArXiv`` and ``openAccessPdf`` (filled earlier)
 3. OpenAlex locations
 4. Unpaywall, every ``oa_locations`` entry
-5. arXiv title search
-6. DeepSeek web search, only while a pick still has no PDF
-7. A ranged GET that must start with ``%PDF``
+5. HAL, CORE and OpenAIRE green OA (author copies in repositories)
+6. arXiv title search
+7. DeepSeek web search, only while a pick still has no PDF
+8. A ranged GET that must start with ``%PDF``
 
-Canonical arXiv PDFs are not byte-checked. Every other URL is. Repository
-links (``/bitstream/``, ``?download=1``, ``?pdf=render``) are eligible; a
-DOI landing page is not. Empty lookups are cached for about ten days.
+Canonical arXiv PDFs and HAL deposit files are not byte-checked. Every other
+URL is. Repository links (``/bitstream/``, ``?download=1``, ``?pdf=render``) are
+eligible; a DOI landing page is not. Empty lookups are cached for about ten days.
 Sci-Hub and LibGen are never queried.
 """
 from __future__ import annotations
@@ -35,10 +36,18 @@ _GH = re.compile(r"https?://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", re.I)
 _PDFISH = re.compile(
     r"(\.pdf($|[?#]))|arxiv\.org/pdf/|openreview\.net/pdf|"
     r"/pdf(?:/|\?|$)|type=printable|getpdf|stamppdf|application/pdf|"
-    r"/bitstream/|[?&]download=1(?:&|$)|[?&]pdf=render(?:&|$)|[?&]format=pdf(?:&|$)",
+    r"/bitstream/|[?&]download=1(?:&|$)|[?&]pdf=render(?:&|$)|[?&]format=pdf(?:&|$)|"
+    r"hal\.science/[^?#\s]+/document(?:$|[?#])",
     re.I,
 )
 _DOI_PAGE = re.compile(r"^https?://(?:dx\.)?doi\.org/", re.I)
+# HAL and some publishers sit behind a JS proof-of-work wall. An HTML 200 is
+# then "unknown", not "no PDF".
+_CHALLENGE = re.compile(
+    rb"(not a bot|verifying you are human|cf-browser-verification|checking your browser|"
+    rb"just a moment\.\.\.|captcha|enable javascript and cookies)",
+    re.I,
+)
 _CANON_ARXIV = re.compile(r"^https://arxiv\.org/pdf/(?:\d{4}\.\d{4,5}|[a-z\-]+/\d{7})$", re.I)
 _ARXIV_IN_URL = re.compile(
     r"arxiv\.org/(?:abs|pdf|html)/((?:[a-z\-]+/\d{7})|(?:\d{4}\.\d{4,5}))",
@@ -67,9 +76,8 @@ def normalize_pdf_url(url: str | None) -> str:
     if not url:
         return ""
     u = url.strip().split("#", 1)[0]
-    low = u.lower()
-    if low.startswith("http://arxiv.org"):
-        u = "https://" + u[len("http://"):]
+    # DeepSeek and repository mirrors hand back export./www. hosts and proxies.
+    u = re.sub(r"^https?://(?:export\.|www\.)?arxiv\.org/", "https://arxiv.org/", u, flags=re.I)
     if "arxiv.org/abs/" in u:
         u = u.replace("arxiv.org/abs/", "arxiv.org/pdf/")
     return u
@@ -114,8 +122,16 @@ class DomainBreaker:
             log.info("PDF byte-check paused for %s after %d failures", host, n)
 
 
-def confirm_pdf(url: str, breaker: DomainBreaker | None = None, timeout: float = 8) -> bool:
-    """Ranged GET. True only when the body starts with %PDF."""
+class _Unverifiable(Exception):
+    """The host answered, but not with a body we can judge (auth wall, rate limit, 5xx)."""
+
+
+def confirm_pdf(url: str, breaker: DomainBreaker | None = None, timeout: float = 8) -> bool | None:
+    """Ranged GET. True only when the body starts with %PDF.
+
+    ``None`` means "could not tell" (403, 429, 5xx): a bot challenge must not be
+    cached as "no PDF", because the link may work from a browser.
+    """
     url = normalize_pdf_url(url)
     if not url.lower().startswith(("http://", "https://")):
         return False
@@ -133,22 +149,30 @@ def confirm_pdf(url: str, breaker: DomainBreaker | None = None, timeout: float =
         try:
             if with_range and response.status_code == 416:
                 return _read(False)
+            if response.status_code in (401, 403, 407, 429) or response.status_code >= 500:
+                raise _Unverifiable(f"HTTP {response.status_code}")
             chunk = next(response.iter_content(1024), b"") or b""
             if isinstance(chunk, str):
                 chunk = chunk.encode("latin1", "ignore")
+            ctype = (getattr(response, "headers", {}) or {}).get("Content-Type") or ""
+            if "text/html" in ctype.lower() and _CHALLENGE.search(chunk):
+                raise _Unverifiable("bot challenge")
             return chunk.startswith(b"%PDF") or b"%PDF" in chunk[:20]
         finally:
             response.close()
 
-    ok = False
+    result: bool | None = False
     try:
-        ok = bool(_with_deadline(lambda: _read(True), float(timeout) + 2))
+        result = bool(_with_deadline(lambda: _read(True), float(timeout) + 2))
+    except _Unverifiable as e:
+        log.info("PDF byte-check unverifiable for %s: %s", url[:90], e)
+        result = None
     except Exception as e:  # noqa: BLE001
         log.info("PDF byte-check failed for %s: %s", url[:90], e)
-        ok = False
-    if breaker is not None:
-        breaker.record(host, ok)
-    return ok
+        result = False
+    if breaker is not None and result is not None:
+        breaker.record(host, result)
+    return result
 
 
 def unpaywall_endpoint(doi: str) -> str | None:
@@ -234,6 +258,78 @@ def candidates_from_openalex(work: dict) -> tuple[list[tuple[str, str]], str]:
     if oa.get("oa_url"):
         add(str(oa["oa_url"]), "")
     return out, publisher
+
+
+def candidates_from_openaire(record: dict) -> list[tuple[str, str]]:
+    """Direct PDF URLs from the instances of an OpenAIRE research product."""
+    if not isinstance(record, dict):
+        return []
+    access = str((record.get("bestAccessRight") or {}).get("label") or "").upper()
+    if access and access != "OPEN":
+        return []
+    rows, seen = [], set()
+    for inst in record.get("instances") or []:
+        if not isinstance(inst, dict):
+            continue
+        for raw in inst.get("urls") or []:
+            u = normalize_pdf_url(str(raw or ""))
+            if not u.lower().startswith(("http://", "https://")) or u in seen:
+                continue
+            if _DOI_PAGE.search(u) or not looks_like_pdf(u):
+                continue
+            seen.add(u)
+            rows.append((u, ""))
+    return rows
+
+
+def candidates_from_core(item: dict) -> list[tuple[str, str]]:
+    """CORE downloadUrl and full-text links. Landing pages are filtered out."""
+    if not isinstance(item, dict):
+        return []
+    rows, seen = [], set()
+
+    def add(raw) -> None:
+        u = normalize_pdf_url(str(raw or ""))
+        if not u.lower().startswith(("http://", "https://")) or u in seen:
+            return
+        if _DOI_PAGE.search(u) or not looks_like_pdf(u):
+            return
+        seen.add(u)
+        rows.append((u, ""))
+
+    add(item.get("downloadUrl"))
+    for link in item.get("links") or []:
+        if isinstance(link, dict) and str(link.get("type") or "").lower() == "download":
+            add(link.get("url"))
+    for url in item.get("sourceFulltextUrls") or []:
+        add(url)
+    for row in item.get("urls") or []:
+        if isinstance(row, dict):
+            add(row.get("url"))
+    return rows
+
+
+def hal_pdf_url(doc: dict) -> str | None:
+    """HAL deposit file, usually ``.../hal-xxxx/document`` or ``.../file/name.pdf``."""
+    if not isinstance(doc, dict):
+        return None
+    for key in ("fileMain_s", "files_s"):
+        raw = doc.get(key) or ""
+        if isinstance(raw, list):
+            raw = raw[0] if raw else ""
+        u = normalize_pdf_url(str(raw))
+        if u.lower().startswith(("http://", "https://")):
+            return u
+    return None
+
+
+def same_work(doi: str, title: str, paper: Paper) -> bool:
+    """Guard against DOI/title search returning a neighbour."""
+    got = norm_doi(doi)
+    want = norm_doi(paper.doi)
+    if got and want and got == want:
+        return True
+    return _sim(title, paper.title) >= 0.92 if title else False
 
 
 def apply_s2_oa(p: Paper, data: dict) -> None:
@@ -369,7 +465,7 @@ def deepseek_hit_url(hit: dict, title: str) -> str | None:
     if m:
         aid = norm_arxiv(m.group(1))
         return f"https://arxiv.org/pdf/{aid}" if aid else None
-    if re.search(r"\.pdf($|\?)", url, re.I) and not _publisher_host(url):
+    if looks_like_pdf(url) and not _publisher_host(url):
         return normalize_pdf_url(url)
     return None
 
@@ -444,6 +540,14 @@ class _Resolver:
         self.do_arxiv = bool(pdf_cfg.get("arxiv_title", True))
         self.do_deepseek = bool(pdf_cfg.get("deepseek_fallback", True))
         self.deepseek_left = int(pdf_cfg.get("deepseek_limit", 8))
+        self.do_hal = bool(pdf_cfg.get("hal", True))
+        self.hal_left = int(pdf_cfg.get("hal_limit", 8))
+        self.do_core = bool(pdf_cfg.get("core", True))
+        self.core_key = str(pdf_cfg.get("core_api_key") or "").strip()
+        self.core_left = int(pdf_cfg.get("core_limit", 6))
+        self.do_openaire = bool(pdf_cfg.get("openaire", True))
+        self.openaire_left = int(pdf_cfg.get("openaire_limit", 4))
+        self.uncertain = False
         self.institution = cfg.get("institution") or {}
         self.filled = 0
 
@@ -468,7 +572,7 @@ class _Resolver:
         if key and self.store is not None:
             self.store.cache_set(key, payload)
 
-    def _accept(self, p: Paper, url: str, source: str, version: str) -> bool:
+    def _accept(self, p: Paper, url: str, source: str, version: str, trusted: bool = False) -> bool:
         url = normalize_pdf_url(url)
         if not url or _DOI_PAGE.search(url):
             return False
@@ -481,7 +585,18 @@ class _Resolver:
         if p.arxiv_id and (aid or "arxiv.org" in url):
             _set_pdf(p, f"https://arxiv.org/pdf/{p.arxiv_id}", source, "preprint")
             return True
-        if not confirm_pdf(url, self.breaker, self.timeout):
+        if trusted:
+            # HAL file links sit behind a JS proof-of-work wall that a browser
+            # clears but a bot cannot. The shape is known, so skip the byte check.
+            _set_pdf(p, url, source, version)
+            return True
+        ok = confirm_pdf(url, self.breaker, self.timeout)
+        if ok is None:
+            # A 403/429 says nothing about the file. Keep the URL out of the
+            # negative cache so the next run can try again.
+            self.uncertain = True
+            return False
+        if not ok:
             return False
         _set_pdf(p, url, source, version)
         return True
@@ -542,6 +657,95 @@ class _Resolver:
         except ValueError:
             return False
         return self._try_urls(p, candidates_from_unpaywall(data), "unpaywall")
+
+    def _hal(self, p: Paper) -> bool:
+        """French repositories (Inria, LAAS, ISIR) deposit author copies in HAL."""
+        if not self.do_hal or not p.doi or self.hal_left <= 0 or not self._budget():
+            return False
+        self.hal_left -= 1
+        try:
+            response = request(
+                "GET", "https://api.archives-ouvertes.fr/search/",
+                params={
+                    "q": f'doiId_s:"{norm_doi(p.doi)}"',
+                    "fl": "title_s,fileMain_s,uri_s,openAccess_bool",
+                    "wt": "json",
+                    "rows": 3,
+                },
+                retries=1, timeout=20, backoff=1,
+            )
+        except Exception as e:  # noqa: BLE001
+            log.info("HAL PDF lookup skipped: %s", e)
+            return False
+        if response is None or response.status_code != 200:
+            return False
+        try:
+            docs = ((response.json().get("response") or {}).get("docs") or [])
+        except ValueError:
+            return False
+        for doc in docs:
+            if not isinstance(doc, dict):
+                continue
+            title = (doc.get("title_s") or [""])[0] if isinstance(doc.get("title_s"), list) else doc.get("title_s")
+            if not same_work(p.doi, str(title or ""), p):
+                continue
+            url = hal_pdf_url(doc)
+            if url and re.search(r"(\.pdf($|\?)|/document($|\?))", url, re.I):
+                if self._accept(p, url, "hal", "", trusted=True):
+                    return True
+        return False
+
+    def _core(self, p: Paper) -> bool:
+        if not self.do_core or not self.core_key or not p.doi or self.core_left <= 0 or not self._budget():
+            return False
+        self.core_left -= 1
+        try:
+            response = request(
+                "GET", "https://api.core.ac.uk/v3/search/outputs/",
+                params={"q": f'doi:"{norm_doi(p.doi)}"', "limit": 3},
+                headers={"Authorization": f"Bearer {self.core_key}"},
+                retries=1, timeout=25, backoff=2,
+            )
+        except Exception as e:  # noqa: BLE001
+            log.info("CORE PDF lookup skipped: %s", e)
+            return False
+        if response is None or response.status_code != 200:
+            return False
+        try:
+            items = response.json().get("results") or []
+        except ValueError:
+            return False
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            if not same_work(str(item.get("doi") or ""), str(item.get("title") or ""), p):
+                continue
+            if self._try_urls(p, candidates_from_core(item), "core"):
+                return True
+        return False
+
+    def _openaire(self, p: Paper) -> bool:
+        if not self.do_openaire or not p.doi or self.openaire_left <= 0 or not self._budget():
+            return False
+        self.openaire_left -= 1
+        try:
+            response = request(
+                "GET", "https://api.openaire.eu/graph/v1/researchProducts",
+                params={"pid": norm_doi(p.doi)},
+                retries=1, timeout=15, backoff=2,
+            )
+        except Exception as e:  # noqa: BLE001
+            log.info("OpenAIRE PDF lookup skipped: %s", e)
+            return False
+        if response is None or response.status_code != 200:
+            return False
+        try:
+            results = response.json().get("results") or []
+        except ValueError:
+            return False
+        if not results or not isinstance(results[0], dict):
+            return False
+        return self._try_urls(p, candidates_from_openaire(results[0]), "openaire")
 
     def _arxiv_title(self, p: Paper) -> bool:
         if p.arxiv_id or not self.do_arxiv or not self._budget():
@@ -682,11 +886,15 @@ class _Resolver:
                 self._access(paper)
                 continue
             known_source = paper.signals.get("pdf_source") or "known"
+            self.uncertain = False
             found = (
                 self._try_urls(paper, pending, known_source)
                 or self._s2(paper)
                 or self._openalex(paper)
                 or self._unpaywall(paper)
+                or self._hal(paper)
+                or self._core(paper)
+                or self._openaire(paper)
                 or self._arxiv_title(paper)
                 or self._deepseek(paper)
             )
@@ -695,12 +903,13 @@ class _Resolver:
                 paper.signals.pop("access", None)
             else:
                 self._access(paper)
-            self._write_cache(paper, {
-                "url": paper.pdf_url or "",
-                "source": paper.signals.get("pdf_source") or "",
-                "version": paper.signals.get("pdf_version") or "",
-                "publisher_url": paper.signals.get("publisher_url") or "",
-            })
+            if paper.pdf_url or not self.uncertain:
+                self._write_cache(paper, {
+                    "url": paper.pdf_url or "",
+                    "source": paper.signals.get("pdf_source") or "",
+                    "version": paper.signals.get("pdf_version") or "",
+                    "publisher_url": paper.signals.get("publisher_url") or "",
+                })
         if self.lookups or self.filled:
             log.info("PDF resolve lookups=%d filled=%d", self.lookups, self.filled)
         return self.filled

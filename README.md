@@ -16,7 +16,7 @@ sources/    arxiv · openalex · journals(ISSN) · semantic_scholar · deepseek_
 s2.py       Semantic Scholar 全端点共用 1.1s 限速，优先 paper/batch、author/batch
 interests/  config · feedback · zotero(可选) · seeds
 rank/       embed(API → 本地模型 → TF-IDF，API 向量缓存) · signals · llm · score
-pdf.py      arXiv PDF，以及 OpenAlex / Unpaywall / S2 的开放获取 PDF
+pdf.py      arXiv PDF，以及 OpenAlex / Unpaywall / S2 / HAL / CORE / OpenAIRE 的开放获取 PDF
 push/       飞书卡片（含 PDF 按钮）· 可选自建应用发送 PDF 文件 · Markdown/HTML 日报
 ```
 
@@ -56,6 +56,7 @@ python -m paper_radar run                        # 真正推送，需要 FEISHU_
 | `S2_API_KEY` | 推荐 | Semantic Scholar。所有端点合计 **1 次/秒**，代码里按 1.1 秒间隔共用一个限速器 |
 | `OPENALEX_API_KEY` / `OPENALEX_EMAIL` | 可选 | OpenAlex；邮箱也用于 Unpaywall |
 | `UNPAYWALL_EMAIL` | 可选 | 不填则用 `OPENALEX_EMAIL` |
+| `CORE_API_KEY` | 可选 | CORE v3 机构仓库检索；不填就跳过 CORE（匿名请求很快 429） |
 | `EMBED_API_KEY` / `EMBED_BASE_URL` / `EMBED_MODEL` | 可选 | 不填则用 TF-IDF |
 | `FEISHU_APP_ID` / `FEISHU_APP_SECRET` / `FEISHU_RECEIVE_ID` / `FEISHU_RECEIVE_ID_TYPE` | 可选 | 四个都有才会把 PDF 文件发到飞书；缺任何一个只发卡片 |
 
@@ -70,7 +71,7 @@ Settings → Actions → General → Workflow permissions 选 **Read and write**
 每个大方向一张卡片（太长会拆成多张，单条控制在约 18KB，低于自定义机器人 20KB 限制）。每篇有：
 
 - 分数徽章、子方向、中文 TL;DR、为什么推荐
-- **PDF 按钮**：只对最终入选的论文解析，顺序是 arXiv → S2 `externalIds.ArXiv` / `openAccessPdf` → OpenAlex 全部 location → Unpaywall 全部 `oa_locations` → arXiv 标题检索 → DeepSeek（仅当仍没有 PDF）。非 arXiv 链接要做一次 `Range: bytes=0-1023`，正文以 `%PDF` 开头才保留。按钮写成 `PDF (arXiv preprint)` 或 `PDF (accepted)` / `PDF (published)`。没有开放获取 PDF 的期刊论文不编造文件链接，改给 DOI，并在 `institution.enabled` 时加北京理工大学 WebVPN 和 CARSI（IEEE / ScienceDirect PII）
+- **PDF 按钮**：只对最终入选的论文解析，顺序是 arXiv → S2 `externalIds.ArXiv` / `openAccessPdf` → OpenAlex 全部 location → Unpaywall 全部 `oa_locations` → HAL → CORE → OpenAIRE → arXiv 标题检索 → DeepSeek（仅当仍没有 PDF）。非 arXiv 链接要做一次 `Range: bytes=0-1023`，正文以 `%PDF` 开头才保留；HAL 的 deposit 文件在 JS 验证墙后面，按 `fileMain_s` / `files_s` 直接接受，由浏览器完成验证。按钮写成 `PDF (arXiv preprint)` 或 `PDF (accepted)` / `PDF (published)`。没有开放获取 PDF 的期刊论文不编造文件链接，改给 DOI，并在 `institution.enabled` 时加北京理工大学 WebVPN 和 CARSI（IEEE / ScienceDirect PII）
 - arXiv、DOI、代码按钮（摘要或备注里出现 `github.com/owner/repo` 时）
 
 ### 自定义机器人（卡片）
@@ -175,7 +176,7 @@ zotero:
 
 - 没配 LLM key 就没有模型写的中文 TL;DR，DeepSeek 网页搜索也会跳过。
 - 领域过滤看的是标题和摘要。除了 vehicle / driving / traffic，也认 path tracking、tire、steering、yaw-rate、chassis、lane keeping、ACC、electric vehicle。通篇不用这些词的驾驶论文仍会被丢掉。某个方向当天没有领域内候选时，日报里这个方向就是空的。
-- Unpaywall 的请求是 `GET https://api.unpaywall.org/v2/{裸DOI}?email=`。`url_for_pdf` 可以是 `type=printable` 这类不以 `.pdf` 结尾的地址，但入选前会用字节头确认。仓库链接（`/bitstream/`、`?download=1`、`?pdf=render`）同样先确认再放上卡片。没找到 PDF 的结果缓存约 10 天。付费墙论文卡片给 DOI，并可选北京理工大学 WebVPN / CARSI。
+- Unpaywall 的请求是 `GET https://api.unpaywall.org/v2/{裸DOI}?email=`。`url_for_pdf` 可以是 `type=printable` 这类不以 `.pdf` 结尾的地址，但入选前会用字节头确认。仓库链接（`/bitstream/`、`?download=1`、`?pdf=render`）同样先确认再放上卡片。HAL / CORE / OpenAIRE 补绿色 OA（作者稿）；CORE 需要 `CORE_API_KEY`，OpenAIRE 未认证约 60 次/小时。403、429、5xx 或人机验证页算「无法验证」，不写进 10 天的空结果缓存，下一天会再试。
 - DeepSeek 或 OpenAlex 补上的发表日期不会使用未来的卷期日期；Crossref 优先 `published-online`。摘要里的 `## Abstract:` 等 Markdown 标题会去掉，避免把日报和卡片拆乱。
 - arXiv 建议 3 秒一次请求；被限流时改抓 `arxiv.org/list/<cat>/new`（只有最近一次公告）。
 - 不配 `S2_API_KEY` 时推荐接口经常 429。限速和退避之后仍失败，就跳过剩余子方向，不影响 arXiv / OpenAlex。

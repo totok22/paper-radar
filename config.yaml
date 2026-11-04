@@ -123,6 +123,13 @@ pdf:
   arxiv_title: true          # 没有 arXiv id 时按标题检索 export.arxiv.org（自带 3 秒间隔）
   deepseek_fallback: true    # 仍无 PDF 时才用 DeepSeek 搜索，查询不超过 128 字符
   deepseek_limit: 8
+  hal: true                  # HAL：法国机构仓库，机器人/控制方向命中率高，无需鉴权
+  hal_limit: 8
+  core: true                 # CORE：机构仓库聚合，需要免费的 CORE_API_KEY（或 core_api_key）
+  core_api_key: ""
+  core_limit: 6
+  openaire: true             # OpenAIRE Graph：绿色 OA，未认证约 60 次/小时
+  openaire_limit: 4
   byte_timeout: 8            # 候选链接做 Range 请求，正文须以 %PDF 开头
   byte_fail_limit: 3         # 同一域名连续失败这多次后，本次运行不再请求它
   empty_cache_days: 10       # 没找到 PDF 的缓存过期天数（7–14）

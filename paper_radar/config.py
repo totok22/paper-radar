@@ -42,6 +42,7 @@ def load_config(path: str | Path, *, check: bool = True) -> dict:
     journals["email"] = journals.get("email") or oa.get("email") or ""
     pdf = cfg.setdefault("pdf", {})
     pdf["email"] = env("UNPAYWALL_EMAIL") or pdf.get("email") or oa.get("email") or ""
+    pdf["core_api_key"] = env("CORE_API_KEY") or pdf.get("core_api_key") or ""
     z = cfg.setdefault("zotero", {})
     z["library_id"] = env("ZOTERO_ID") or z.get("library_id") or ""
     z["api_key"] = env("ZOTERO_KEY") or z.get("api_key") or ""

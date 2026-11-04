@@ -678,6 +678,7 @@ class _Resolver:
             log.info("HAL PDF lookup skipped: %s", e)
             return False
         if response is None or response.status_code != 200:
+            log.info("HAL PDF lookup HTTP %s", "none" if response is None else response.status_code)
             return False
         try:
             docs = ((response.json().get("response") or {}).get("docs") or [])
@@ -710,10 +711,18 @@ class _Resolver:
             log.info("CORE PDF lookup skipped: %s", e)
             return False
         if response is None or response.status_code != 200:
+            code = "none" if response is None else response.status_code
+            if response is not None and response.status_code in (401, 403):
+                log.warning("CORE rejected the API key (HTTP %s).", response.status_code)
+            else:
+                log.info("CORE PDF lookup HTTP %s", code)
             return False
         try:
             items = response.json().get("results") or []
         except ValueError:
+            return False
+        if not items:
+            log.info("CORE returned no record for %s", p.doi)
             return False
         for item in items:
             if not isinstance(item, dict):
@@ -738,12 +747,14 @@ class _Resolver:
             log.info("OpenAIRE PDF lookup skipped: %s", e)
             return False
         if response is None or response.status_code != 200:
+            log.info("OpenAIRE PDF lookup HTTP %s", "none" if response is None else response.status_code)
             return False
         try:
             results = response.json().get("results") or []
         except ValueError:
             return False
         if not results or not isinstance(results[0], dict):
+            log.info("OpenAIRE returned no record for %s", p.doi)
             return False
         return self._try_urls(p, candidates_from_openaire(results[0]), "openaire")
 
@@ -861,6 +872,8 @@ class _Resolver:
                 apply_s2_oa(paper, row)
 
     def run(self) -> int:
+        if self.do_core and not self.core_key:
+            log.info("CORE skipped: CORE_API_KEY is empty")
         self._s2_batch()
         for paper in self.papers:
             if paper.arxiv_id:

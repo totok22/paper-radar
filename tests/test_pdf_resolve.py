@@ -7,9 +7,13 @@ from paper_radar.models import Paper
 from paper_radar.pdf import (
     DomainBreaker,
     arxiv_title_query,
+    candidates_from_core,
+    candidates_from_openaire,
     confirm_pdf,
     deepseek_hit_url,
     deepseek_pdf_queries,
+    hal_pdf_url,
+    normalize_pdf_url,
     pdf_button_label,
     pick_arxiv_entry,
     resolve_pdfs,
@@ -104,6 +108,114 @@ def test_arxiv_title_and_deepseek_acceptance():
     assert deepseek_hit_url(
         {"title": "A different paper entirely", "url": "https://oa.example.org/x.pdf"}, title,
     ) is None
+
+
+def test_core_openaire_hal_candidates():
+    core = {
+        "downloadUrl": "https://core.ac.uk/download/pdf/123.pdf",
+        "links": [
+            {"type": "download", "url": "https://core.ac.uk/download/456.pdf"},
+            {"type": "display", "url": "https://core.ac.uk/outputs/1"},
+        ],
+        "sourceFulltextUrls": ["https://inria.hal.science/hal-04191464/document"],
+        "urls": [{"url": "https://repo.example.edu/bitstream/1/paper.pdf", "type": "fulltext"}],
+    }
+    assert [u for u, _ in candidates_from_core(core)] == [
+        "https://core.ac.uk/download/pdf/123.pdf",
+        "https://core.ac.uk/download/456.pdf",
+        "https://inria.hal.science/hal-04191464/document",
+        "https://repo.example.edu/bitstream/1/paper.pdf",
+    ]
+    assert candidates_from_core({}) == []
+
+    openaire = {
+        "bestAccessRight": {"label": "OPEN"},
+        "instances": [
+            {"urls": ["https://doi.org/10.1/x",
+                      "https://journals.plos.org/plosone/article/file?id=1&type=printable"]},
+            {"urls": ["https://inria.hal.science/hal-1/document"]},
+        ],
+    }
+    assert [u for u, _ in candidates_from_openaire(openaire)] == [
+        "https://journals.plos.org/plosone/article/file?id=1&type=printable",
+        "https://inria.hal.science/hal-1/document",
+    ]
+    assert candidates_from_openaire({"bestAccessRight": {"label": "RESTRICTED"},
+                                     "instances": [{"urls": ["https://x.example/a.pdf"]}]}) == []
+
+    assert hal_pdf_url({"fileMain_s": "https://inria.hal.science/hal-04191464/document"}) == (
+        "https://inria.hal.science/hal-04191464/document"
+    )
+    assert hal_pdf_url({}) is None
+    assert normalize_pdf_url("https://export.arxiv.org/pdf/2502.10363#1#5#1") == (
+        "https://arxiv.org/pdf/2502.10363"
+    )
+
+
+def test_hal_fills_pdf_and_unverifiable_is_not_cached(tmp_path, monkeypatch):
+    class Resp:
+        status_code = 200
+        headers = {}
+
+        def __init__(self, payload):
+            self._payload = payload
+
+        def json(self):
+            return self._payload
+
+    def fake(method, url, **kw):
+        if "openalex.org" in url:
+            return Resp({"locations": []})
+        if "archives-ouvertes" in url:
+            return Resp({"response": {"docs": [{
+                "title_s": ["Robust Robot Planning for Human-Robot Collaboration"],
+                "fileMain_s": "https://inria.hal.science/hal-04191464/document",
+            }]}})
+        raise AssertionError(url)
+
+    monkeypatch.setattr("paper_radar.pdf.request", fake)
+    monkeypatch.setattr("paper_radar.pdf.confirm_pdf", lambda *a, **k: True)
+    paper = Paper(
+        title="Robust Robot Planning for Human-Robot Collaboration",
+        doi="10.1109/ICRA48891.2023.10161406",
+        abstract="a" * 40,
+    )
+    cfg = {"pdf": {"lookup_limit": 5, "email": ""}, "institution": {"enabled": False}}
+    assert resolve_pdfs([paper], cfg) == 1
+    assert paper.pdf_url == "https://inria.hal.science/hal-04191464/document"
+    assert paper.signals["pdf_source"] == "hal"
+
+    # 403 / 429 must not poison the ten-day negative cache.
+    def fake_oa(method, url, **kw):
+        if "openalex.org" in url:
+            return Resp({"best_oa_location": {"pdf_url": "https://publisher.example/getpdf?id=9"},
+                         "locations": []})
+        return Resp({"response": {"docs": []}, "results": []})
+
+    monkeypatch.setattr("paper_radar.pdf.request", fake_oa)
+    monkeypatch.setattr("paper_radar.pdf.confirm_pdf", lambda *a, **k: None)
+    store = Store(tmp_path / "c.sqlite")
+    blocked = Paper(title="Blocked repository copy of a vehicle MPC paper",
+                    doi="10.1109/TIV.2024.9", abstract="a" * 40)
+    assert resolve_pdfs([blocked], cfg, store) == 0
+    assert store.cache_get("pdf-resolve:v1:10.1109/tiv.2024.9") is None
+
+
+def test_byte_check_reports_unverifiable(monkeypatch):
+    class Resp:
+        status_code = 403
+
+        def iter_content(self, n):
+            yield b"<html>challenge</html>"
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr("paper_radar.pdf.requests.get", lambda *a, **k: Resp())
+    assert confirm_pdf("https://repo.example.edu/paper.pdf") is None
+    breaker = DomainBreaker(1)
+    assert confirm_pdf("https://repo.example.edu/paper.pdf", breaker) is None
+    assert breaker.allowed("repo.example.edu")
 
 
 def test_empty_pdf_cache_expires(tmp_path):

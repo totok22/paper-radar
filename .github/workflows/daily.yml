@@ -46,6 +46,7 @@ jobs:
           EMBED_BASE_URL: ${{ secrets.EMBED_BASE_URL }}
           EMBED_MODEL: ${{ secrets.EMBED_MODEL }}
           UNPAYWALL_EMAIL: ${{ secrets.UNPAYWALL_EMAIL }}
+          CORE_API_KEY: ${{ secrets.CORE_API_KEY }}
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
           FEISHU_RECEIVE_ID: ${{ secrets.FEISHU_RECEIVE_ID }}

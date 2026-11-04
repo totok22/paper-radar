@@ -40,8 +40,8 @@ class S2RecommendSource(Source):
     def fetch(self, topics) -> list[Paper]:
         client = get_client(self.scfg.get("api_key") or "")
         # Recommendations are usually months old; a daily 3-day window would
-        # throw almost all of them away, so this source has its own window.
-        days = int(self.scfg.get("lookback_days", max(self.days, 14)))
+        # throw almost all of them away, so this source has its own floor.
+        days = self.window_days(minimum=14)
         since = (date.today() - timedelta(days=days)).isoformat()
         retries = int(self.scfg.get("retries", 2))
         out, fails = [], 0

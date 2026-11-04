@@ -64,7 +64,7 @@ Settings → Actions → General → Workflow permissions 选 **Read and write**
 
 手动验证：Actions → paper-radar daily → Run workflow，`dry_run` 填 **true**。这一步只写报告和卡片 JSON，**不会**调用飞书 webhook，也**不会**上传 PDF。日志里的 `stats` 应包含 `per_source`、`selected`、`with_pdf`、`s2_requests`。确认报告没问题后，再用 `dry_run=false` 正式推送。dry-run 的报告和卡片 JSON 作为 Actions artifact 上传（保留 14 天），**不会**提交 `data/state.sqlite`，所以不会把论文记成已推送。
 
-`workflow_dispatch` 的 `days` 仍可临时覆盖 `lookback_days`。
+`workflow_dispatch` 的 `days` 会放宽全局 `lookback_days`；S2 / journals / DeepSeek 的自有窗口取「全局窗口」和「各自下限」的较大值，所以 `--days 30` 回补时它们也会跟着放宽到 30 天。
 
 ## 飞书卡片
 
@@ -122,7 +122,7 @@ Settings → Actions → General → Workflow permissions 选 **Read and write**
 
 arXiv 全量类是 `cs.RO`、`eess.SY`（原本就有）和 `cs.SY`。`cs.CV` / `cs.LG` / `cs.AI` 额外认 path tracking、vehicle dynamics、tire model、lateral / longitudinal control、lane keeping、adaptive cruise。期刊 ISSN 增加 Vehicle System Dynamics（`0042-3114`）和 Control Engineering Practice（`0967-0661`）。OpenAlex 会对带 `extra_queries` 的子方向再检索一次。
 
-Semantic Scholar 的限速在 `paper_radar/s2.py`：全进程一个时钟，间隔 `min_interval`（1.1 秒），429 读 `Retry-After` 或指数退避，单次运行超过 `max_requests`（300）就停止再请求并继续用已经拿到的数据。种子摘要写在 SQLite 缓存里，第二天不会重复拉。推荐结果常是稍旧的经典论文，所以 S2 单独用 `sources.semantic_scholar.lookback_days`（默认 14 天），不跟日报的 3 天共用；连续 `max_failures`（默认 2）个子方向失败就跳过剩余 S2，避免把运行时间耗在重试上。
+Semantic Scholar 的限速在 `paper_radar/s2.py`：全进程一个时钟，间隔 `min_interval`（1.1 秒），429 读 `Retry-After` 或指数退避，单次运行超过 `max_requests`（300）就停止再请求并继续用已经拿到的数据。种子摘要写在 SQLite 缓存里，第二天不会重复拉。推荐结果常是稍旧的经典论文，所以 S2 用「全局 `lookback_days`」和「`sources.semantic_scholar.lookback_days`（默认 14 天）」的较大值：日常运行看 14 天，`--days 30` 回补时会跟到 30 天。连续 `max_failures`（默认 2）个子方向失败就跳过剩余 S2，避免把运行时间耗在重试上。
 
 ## 反馈和周报
 

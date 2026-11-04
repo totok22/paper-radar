@@ -25,7 +25,7 @@ sources:
     per_query: 40
   journals:
     enabled: true            # 目标期刊新文章（OpenAlex 按 ISSN，替代不稳定的 IEEE RSS）
-    lookback_days: 10
+    lookback_days: 10       # 至少 10 天（期刊索引慢）；--days 更大时跟着放宽
     max_pages: 3
     issns:
       T-ITS: 1524-9050
@@ -42,7 +42,7 @@ sources:
     min_interval: 1.1        # 账号限额：所有 S2 端点合计 1 req/s
     max_requests: 300        # 单次运行硬上限，正常一天大约十几次
     batch_size: 500          # paper/batch、author/batch 每批条数（接口上限 500）
-    lookback_days: 14        # 推荐结果常是稍旧的经典论文，单独放宽，不跟日报的 3 天共用
+    lookback_days: 14        # 至少 14 天；--days 更大时跟着放宽，不跟日报的 3 天共用
     max_failures: 2          # 连续两个子方向失败就跳过剩余 S2，别把时间耗在重试上
     retries: 2               # 推荐请求的尝试次数（原来 4 次，失败一个子方向要等半分钟）
   rss:
@@ -53,7 +53,7 @@ sources:
     queries_per_topic: 3     # 每个子方向：arXiv、IEEE/ScienceDirect、OpenReview 变体
     count: 50                # 每次 1–50 条；按请求计费，不按条数
     min_rerank_score: 1.0    # 官方把 >=1.5 视为高质量；1.0 多留一些再交给去重和领域过滤
-    lookback_days: 7         # 查询里的 after: 日期。返回的 date 可能是抓取时间，不当作发表日期
+    lookback_days: 7         # 至少 7 天；--days 更大时跟着放宽。查询里的 after: 日期，返回的 date 可能是抓取时间，不当作发表日期
     max_requests: 48         # 11 个子方向 × 3 ≈ 33，再加 4 条运动控制专用查询
     doi_lookups: 20          # 没有 arXiv id / DOI 时，用标题问 OpenAlex，不够再问 Crossref
     biblio_lookups: 24       # 已有 DOI 但缺作者或日期时，按 DOI 问 OpenAlex / Crossref（不计搜索费）

@@ -97,6 +97,15 @@ def test_budget_stops_further_calls(monkeypatch):
     assert calls["n"] == 1
 
 
+def test_window_days_takes_the_wider_value():
+    from paper_radar.sources.base import Source
+
+    assert Source({"lookback_days": 14}, {"lookback_days": 3}).window_days(minimum=14) == 14
+    assert Source({"lookback_days": 14}, {"lookback_days": 30}).window_days(minimum=14) == 30
+    assert Source({}, {"lookback_days": 30}).window_days(minimum=7) == 30
+    assert Source({}, {"lookback_days": 3}).window_days(minimum=7) == 7
+
+
 def test_s2_recommendations_use_their_own_window(monkeypatch):
     class Topic:
         def __init__(self, tid):
@@ -123,6 +132,31 @@ def test_s2_recommendations_use_their_own_window(monkeypatch):
     got = src.fetch({f"t{i}": Topic(f"t{i}") for i in range(3)})
     assert len(got) == 3
     assert calls[0]["retries"] == 2
+
+
+def test_s2_window_follows_a_wider_backfill(monkeypatch):
+    class Topic:
+        def __init__(self, tid):
+            self.id = tid
+            self.positive_ids = [f"ARXIV:{tid}"]
+            self.negative_ids = []
+
+    class Client:
+        sent = 1
+        max_requests = 300
+
+        def request(self, method, url, **kw):
+            return Resp(200, {"recommendedPapers": [{
+                "title": "A two-week-old paper",
+                "publicationDate": (date.today() - timedelta(days=20)).isoformat(),
+                "externalIds": {"ArXiv": "2401.00002"},
+            }]})
+
+    monkeypatch.setattr("paper_radar.sources.semantic_scholar.get_client", lambda *a, **k: Client())
+    daily = S2RecommendSource({"lookback_days": 14}, {"lookback_days": 3})
+    assert daily.fetch({"t": Topic("t")}) == []
+    backfill = S2RecommendSource({"lookback_days": 14}, {"lookback_days": 30})
+    assert len(backfill.fetch({"t": Topic("t")})) == 1
 
 
 def test_s2_stops_after_two_consecutive_failures(monkeypatch):

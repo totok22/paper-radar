@@ -150,7 +150,7 @@ class OpenAlexJournalSource(_OpenAlexBase):
         issns = self.scfg.get("issns", {})
         if not issns:
             return []
-        days = int(self.scfg.get("lookback_days", max(self.days, 7)))  # journals index slower
+        days = self.window_days(minimum=7)  # journals index slower
         from datetime import date, timedelta
         since = (date.today() - timedelta(days=days)).isoformat()
         flt = f"primary_location.source.issn:{'|'.join(issns.values())},from_publication_date:{since}"

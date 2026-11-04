@@ -1,7 +1,10 @@
 """Shared Semantic Scholar limiter: one clock, batch endpoints, 429 backoff, budget."""
+from datetime import date, timedelta
+
 from paper_radar.models import Paper
 from paper_radar.rank import signals
 from paper_radar.s2 import AUTHOR_BATCH, PAPER_BATCH, get_client
+from paper_radar.sources.semantic_scholar import S2RecommendSource
 
 
 class Resp:
@@ -92,6 +95,57 @@ def test_budget_stops_further_calls(monkeypatch):
     assert client.request("GET", "https://api.semanticscholar.org/x") is not None
     assert client.request("GET", "https://api.semanticscholar.org/y") is None
     assert calls["n"] == 1
+
+
+def test_s2_recommendations_use_their_own_window(monkeypatch):
+    class Topic:
+        def __init__(self, tid):
+            self.id = tid
+            self.positive_ids = [f"ARXIV:{tid}"]
+            self.negative_ids = []
+
+    calls = []
+
+    class Client:
+        sent = 1
+        max_requests = 300
+
+        def request(self, method, url, **kw):
+            calls.append(kw)
+            return Resp(200, {"recommendedPapers": [{
+                "title": "An older but relevant paper",
+                "publicationDate": (date.today() - timedelta(days=10)).isoformat(),
+                "externalIds": {"ArXiv": "2401.00001"},
+            }]})
+
+    monkeypatch.setattr("paper_radar.sources.semantic_scholar.get_client", lambda *a, **k: Client())
+    src = S2RecommendSource({"lookback_days": 14, "retries": 2}, {"lookback_days": 3})
+    got = src.fetch({f"t{i}": Topic(f"t{i}") for i in range(3)})
+    assert len(got) == 3
+    assert calls[0]["retries"] == 2
+
+
+def test_s2_stops_after_two_consecutive_failures(monkeypatch):
+    class Topic:
+        def __init__(self, tid):
+            self.id = tid
+            self.positive_ids = [f"ARXIV:{tid}"]
+            self.negative_ids = []
+
+    calls = []
+
+    class Client:
+        sent = 1
+        max_requests = 300
+
+        def request(self, method, url, **kw):
+            calls.append(1)
+            return Resp(500, {})
+
+    monkeypatch.setattr("paper_radar.sources.semantic_scholar.get_client", lambda *a, **k: Client())
+    src = S2RecommendSource({"max_failures": 2, "retries": 2}, {"lookback_days": 3})
+    assert src.fetch({f"t{i}": Topic(f"t{i}") for i in range(5)}) == []
+    assert len(calls) == 2
 
 
 def test_paper_batch_chunks_and_author_batch(monkeypatch):

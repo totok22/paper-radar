@@ -122,7 +122,7 @@ Settings → Actions → General → Workflow permissions 选 **Read and write**
 
 arXiv 全量类是 `cs.RO`、`eess.SY`（原本就有）和 `cs.SY`。`cs.CV` / `cs.LG` / `cs.AI` 额外认 path tracking、vehicle dynamics、tire model、lateral / longitudinal control、lane keeping、adaptive cruise。期刊 ISSN 增加 Vehicle System Dynamics（`0042-3114`）和 Control Engineering Practice（`0967-0661`）。OpenAlex 会对带 `extra_queries` 的子方向再检索一次。
 
-Semantic Scholar 的限速在 `paper_radar/s2.py`：全进程一个时钟，间隔 `min_interval`（1.1 秒），429 读 `Retry-After` 或指数退避，单次运行超过 `max_requests`（300）就停止再请求并继续用已经拿到的数据。种子摘要写在 SQLite 缓存里，第二天不会重复拉。
+Semantic Scholar 的限速在 `paper_radar/s2.py`：全进程一个时钟，间隔 `min_interval`（1.1 秒），429 读 `Retry-After` 或指数退避，单次运行超过 `max_requests`（300）就停止再请求并继续用已经拿到的数据。种子摘要写在 SQLite 缓存里，第二天不会重复拉。推荐结果常是稍旧的经典论文，所以 S2 单独用 `sources.semantic_scholar.lookback_days`（默认 14 天），不跟日报的 3 天共用；连续 `max_failures`（默认 2）个子方向失败就跳过剩余 S2，避免把运行时间耗在重试上。
 
 ## 反馈和周报
 

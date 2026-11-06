@@ -1,0 +1,151 @@
+<!doctype html><meta charset='utf-8'><title>Paper Radar 2026-11-06</title><body style='max-width:900px;margin:auto;font-family:sans-serif;line-height:1.6'><h1>📡 Paper Radar 日报 2026-11-06</h1>
+<blockquote>
+<p>来源召回：{'arxiv': 510, 'openalex': 208, 'journals': 27, 'semantic_scholar': 103, 'deepseek_search': 29}　→ 去重后 656　→ 嵌入预筛 40　→ 推送 12　|　嵌入: api　评分: LLM(deepseek-flash)</p>
+</blockquote>
+<h2>运动规划（3）</h2>
+<h3>1. <a href="https://doi.org/10.1109/lra.2026.3734856">Mind the Margin: Safety- and Physical-Aware Planning for End-to-End Autonomous Driving</a></h3>
+<ul>
+<li>子方向：运动规划 / 视觉语言大模型-场景行为映射　|　日期：2026-11-01　|　来源：semantic_scholar</li>
+<li>作者：Qi Xiong, Jin-Lai Zhang, Chuan-Ping Hu, Hao Chen, Lin Hu</li>
+<li><strong>综合分 6.5</strong>　嵌入相关 0.58　质量 0.35　LLM: 相关8 新颖6 实验7 入门6</li>
+<li>刊会: Robotics and Automation Letters；实验关键词: nuscenes；作者最高 h-index: 15</li>
+<li>📝 TL;DR：MarginAD在端到端规划中注入运动学先验与安全裕度碰撞损失，抑制物理不可行与终端漂移。</li>
+<li>💡 理由：端到端自动驾驶规划显式嵌入运动学可行性与安全裕度约束，RA-L在刊，方法与写作均较规范。</li>
+<li><a href="https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421f4f848d228226f/10.1109/lra.2026.3734856">WebVPN</a> · <a href="https://doi.org/10.1109/lra.2026.3734856">DOI</a></li>
+<li>摘要：While end-to-end autonomous driving has demonstrated remarkable progress, existing frameworks frequently struggle with physical infeasibility, inadequate safety margins, and severe terminal drift over long planning horizons. These limitations stem from a fundamental disconnect between purely data-driven imitation and the stringent kinematic and safety constraints required in real-world driving. To bridge this gap, we propose MarginAD, a novel safety- and physical-aware planning framework that seamlessly integrates explicit physical priors and safety constraints into the end-to-end optimization…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.1109/lra.2026.3734856</code> / <code>dislike</code></li>
+</ul>
+<h3>2. <a href="https://arxiv.org/abs/2605.31572">nuReasoning: A Reasoning-Centric Dataset and Benchmark for Long-Tail Autonomous Driving</a></h3>
+<ul>
+<li>子方向：运动规划 / 视觉语言大模型-场景行为映射　|　日期：　|　来源：deepseek_search</li>
+<li>作者：</li>
+<li><strong>综合分 5.8</strong>　嵌入相关 0.62　质量 0.17　LLM: 相关7 新颖6 实验6 入门5</li>
+<li>实验关键词: nuplan, nuscenes, waymo, bench2drive；作者最高 h-index: 44</li>
+<li>📝 TL;DR：面向长尾场景的推理中心数据集与基准，覆盖时空/决策/反事实推理。</li>
+<li>💡 理由：服务 VLM/LLM 驾驶推理评测，与视觉语言-场景行为映射方向相关；偏数据基准类工作，可作实验平台参考。</li>
+<li><a href="https://arxiv.org/pdf/2605.31572">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2605.31572">arXiv</a></li>
+<li>摘要：Reasoning Annotations and Benchmarks. Recent work introduces language supervision through question answering, instruction following, and VLA-oriented annotation. DriveLM [26], MetaVQA [76], LingoQA [53], NuScenes-QA [52], WaymoQA [55], and nuPlan-QA [51] cast driving understanding as QA, while nuInstruct [77] extends this paradigm with multimodal instruction-following. Benchmarks such as DriveBench [24], DVBench [78], and Bench2Drive-VL [79] evaluate VLM reasoning performance. CoVLA [56] provides large-scale trajectory-language pairs, and Impromptu VLA [57] focuses on planning-oriented QA and …</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2605.31572</code> / <code>dislike</code></li>
+</ul>
+<h3>3. <a href="https://doi.org/10.59628/jast.v4i10.3391">LLM-DNN Fusion for Data-Efficient Trajectory Generation in Autonomous Driving: A Hybrid Approach with MPC Optimization</a></h3>
+<ul>
+<li>子方向：运动规划 / 大模型驱动的行为基元库增量式扩展　|　日期：2026-10-28　|　来源：semantic_scholar</li>
+<li>作者：Yusuf Al-jamaly, Khaleel al-Hattab, A. Rawea</li>
+<li><strong>综合分 5.7</strong>　嵌入相关 0.77　质量 0.01　LLM: 相关8 新颖5 实验4 入门7</li>
+<li>实验关键词: carla；作者最高 h-index: 3</li>
+<li>📝 TL;DR：微调LLM与多分支DNN在轨迹层融合，再由MPC做末端优化生成车辆轨迹。</li>
+<li>💡 理由：以LLM为轨迹提案器做自动驾驶运动规划，符合LLM驱动规划方向；仅479条微调样本、期刊影响力弱，严谨性一般，但思路清晰易读。</li>
+<li><a href="https://journals.su.edu.ye/index.php/jast/article/download/3391/1718">PDF</a> · <a href="https://doi.org/10.59628/jast.v4i10.3391">DOI</a></li>
+<li>探索位：这条不是纯按分数挤进来的，用来补一个还没被代表的方向</li>
+<li>摘要：Autonomous vehicle (AV) trajectory planning in dense urban environments requires models that generalize to rare or previously unseen scenario types. Deep neural networks (DNNs) trained on large datasets perform poorly in such data-scarce conditions, while large language models (LLMs) generalize well but lack the numerical precision required for low-level vehicle control. This paper presents a hybrid trajectory planning framework that fuses a finetuned LLM with a multi-branch DNN at the trajectory level and applies a Model Predictive Control (MPC) controller as a final optimization stage. Gemin…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.59628/jast.v4i10.3391</code> / <code>dislike</code></li>
+</ul>
+<h2>运动控制（4）</h2>
+<h3>4. <a href="https://arxiv.org/abs/2610.32719">Cross-Scenario Controller Parameter Transformation from Real-World Driving Data through Flow Matching</a></h3>
+<ul>
+<li>子方向：运动控制 / 场景相似度驱动的控制参量优化　|　日期：2026-10-23　|　来源：semantic_scholar</li>
+<li>作者：Christian Zink, Maik Pfefferkorn, Eric Lenz, F. Kallmeyer, Rolf Findeisen</li>
+<li><strong>综合分 6.8</strong>　嵌入相关 0.68　质量 0.03　LLM: 相关9 新颖7 实验7 入门5</li>
+<li>作者最高 h-index: 7</li>
+<li>📝 TL;DR：用流匹配将ACC参数跨场景迁移，学习驾驶员个性化控制行为。</li>
+<li>💡 理由：跨场景控制器参数适配，贴合场景相似度驱动控制参量优化，且使用真实驾驶数据。</li>
+<li><a href="https://arxiv.org/pdf/2610.32719">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2610.32719">arXiv</a></li>
+<li>摘要：Advanced Driver Assistance Systems have become increasingly widespread, aiming to support drivers, reduce workload, and improve traffic safety. However, many systems are rarely used because their behavior feels unnatural and does not match individual driving behavior. The growing availability of large-scale, real-world human driving data enables more human-like and driver-individual assistance functions. This paper formulates the adaptation of Adaptive Cruise Control parameters as a driver-individual scenario-to-scenario transport problem, transforming controller parameters from one driving co…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2610.32719</code> / <code>dislike</code></li>
+</ul>
+<h3>5. <a href="https://doi.org/10.21203/rs.3.rs-9989197/v1">Distributionally Robust Model Predictive Control with Disturbance Uncertainty Adaptiveness for Obstacle Avoidance of Autonomous Driving</a></h3>
+<ul>
+<li>子方向：运动控制 / MPC 与车辆控制器部署　|　日期：2026-11-04　|　来源：openalex</li>
+<li>作者：Nan Xue, Lei Zhang</li>
+<li><strong>综合分 6.4</strong>　嵌入相关 0.66　质量 0.00　LLM: 相关9 新颖6 实验6 入门4</li>
+<li>📝 TL;DR：用 Koopman 线性化车辆动力学，结合 Wasserstein 分布鲁棒 MPC 做避障。</li>
+<li>💡 理由：对象明确为自动驾驶车辆避障，属 MPC 控制主线；Koopman+DRO 组合有新意，但属预印本、实验验证强度待确认。</li>
+<li><a href="https://www.researchsquare.com/article/rs-9989197/latest.pdf">PDF</a> · <a href="https://doi.org/10.21203/rs.3.rs-9989197/v1">DOI</a></li>
+<li>摘要：Abstract Traditionally, vehicle obstacle avoidance relies on nonlinear model predictive control (NMPC), which suffers from two major drawbacks. First, NMPC incurs higher computational costs compared to its linear counterpart. Second, it may fail in complex scenarios due to simplified modeling of time-varying vehicle dynamics and the presence of noisy disturbances. In this paper, we propose a distributionally robust model predictive control (MPC) framework for autonomous vehicle obstacle avoidance under nonlinear dynamics and unknown disturbance distributions. The Koopman operator is employed t…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.21203/rs.3.rs-9989197/v1</code> / <code>dislike</code></li>
+</ul>
+<h3>6. <a href="https://doi.org/10.1016/j.aei.2026.105419">A data-driven modeling and estimation framework for robust vehicle motion under measurement uncertainty</a></h3>
+<ul>
+<li>子方向：运动控制 / 轨迹特征聚类与动力学参量学习　|　日期：2026-11-03　|　来源：deepseek_search</li>
+<li>作者：Yuan Ji, Xiaohui Hou, Junzhi Zhang, Chen Lv</li>
+<li><strong>综合分 5.8</strong>　嵌入相关 0.80　质量 0.07　LLM: 相关7 新颖5 实验6 入门5</li>
+<li>作者最高 h-index: 20</li>
+<li>📝 TL;DR：针对测量不确定性的车辆运动数据驱动建模与状态估计框架，服务MPC控制。</li>
+<li>💡 理由：聚焦车辆动力学建模与横摆/侧向速度估计，与数据驱动动力学参量学习相关；摘要偏综述式表述，需看正文确认贡献。</li>
+<li><a href="https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421f4f848d228226f/10.1016/j.aei.2026.105419">WebVPN</a> · <a href="https://doi.org/10.1016/j.aei.2026.105419">DOI</a></li>
+<li>摘要：In model-based predictive control, this strategy is standard: Kalman filtering and its nonlinear variants are routinely used to reconstruct unmeasured states and suppress measurement noise before the optimization step. More generally, output-feedback and stochastic MPC have shown that recursive estimation quality has a direct impact on predictive-control performance under noisy sensing [24]. In vehicle applications, this issue is especially relevant because quantities such as lateral velocity and yaw-related states are often noisy or not directly measurable with sufficient reliability, which e…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.1016/j.aei.2026.105419</code> / <code>dislike</code></li>
+</ul>
+<h3>7. <a href="https://arxiv.org/abs/2611.08117">A Hybrid UKF with Explicit Drivetrain Modeling for Low-Velocity State Estimation of Electric Vehicles</a></h3>
+<ul>
+<li>子方向：运动控制 / 轨迹特征聚类与动力学参量学习　|　日期：2026-11-05　|　来源：arxiv</li>
+<li>作者：Hendrik Schäfke, Daniel O. M. Weber, Thomas Seel, Askar Vagapov, Jannes Iatropoulos, Christoph Schweers 等</li>
+<li><strong>综合分 5.6</strong>　嵌入相关 0.53　质量 0.12　LLM: 相关7 新颖5 实验7 入门5</li>
+<li>刊会: Transactions on Intelligent Vehicles；备注: 14 pages, 11 figures, 3 tables. Submitted to IEEE Transactions on Intelligent Vehicles</li>
+<li>📝 TL;DR：面向低速与自动泊车，在双轨模型中加入传动系扭簧阻尼并用神经网络虚拟轮速，构建 UKF 纵向车速估计。</li>
+<li>💡 理由：道路车辆动力学建模与数据驱动状态估计，属车辆控制前置环节，工程扎实但对规划侧创新有限。</li>
+<li><a href="https://arxiv.org/pdf/2611.08117">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.08117">arXiv</a></li>
+<li>摘要：Longitudinal velocity is a core input for vehicle control, driver-assistance, and automated driving functions. Production wheel-speed sensors deliver only a few pulses per revolution, so they lose resolution below 1 km/h, the regime in which automated parking and traffic-jam assistance operate. The motor speed from the electric machine's resolver stays finely resolved down to standstill but reaches the wheels only through a compliant drivetrain. We therefore estimate the longitudinal velocity with an unscented Kalman filter (UKF) on a double-track model adapted to low velocities and incorporat…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.08117</code> / <code>dislike</code></li>
+</ul>
+<h2>场景生成（5）</h2>
+<h3>8. <a href="https://doi.org/10.1016/j.aap.2026.108793">Reactive safety-critical scenario generation for autonomous driving via interaction-adaptive diffusion.</a></h3>
+<ul>
+<li>子方向：场景生成 / 车辆约束下的对抗场景生成　|　日期：2026-10-29　|　来源：semantic_scholar</li>
+<li>作者：Jia-Lei Nie, Heng-Yang Sun, Chu-Jun Xia, Jia-Ming Xing, Shuo Yang, Meng Li 等</li>
+<li><strong>综合分 7.4</strong>　嵌入相关 1.00　质量 0.17　LLM: 相关9 新颖7 实验7 入门6</li>
+<li>实验关键词: closed-loop；作者最高 h-index: 45</li>
+<li>📝 TL;DR：提出交互自适应扩散框架RIGD，按冲突状态动态调整对抗车轨迹，生成可持续交互的安全关键场景。</li>
+<li>💡 理由：面向自动驾驶测试的对抗场景生成，交互引导扩散思路较新，与对抗场景子方向高度契合。</li>
+<li><a href="https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421e7e056d234336155700b8ca891472636a6d29e640e/science/article/pii/S0001457526004021">WebVPN</a> · <a href="https://auth.elsevier.com/ShibAuth/institutionLogin?entityID=https%3A%2F%2Fidp.bit.edu.cn%2Fidp%2Fshibboleth&amp;appReturnURL=https%3A%2F%2Fwww.sciencedirect.com%2Fscience%2Farticle%2Fpii%2FS0001457526004021">CARSI</a> · <a href="https://doi.org/10.1016/j.aap.2026.108793">DOI</a></li>
+<li>摘要：Safety-critical scenario generation is essential for testing automated driving systems under rare but consequential traffic interactions. Although existing methods have advanced this task, they still have limited capability to adapt the generated behavior of the adversarial vehicle (ADV) to evolving ego-ADV interactions, yielding non-reactive cases or hard-collision outcomes that limit the generation of sustained critical interactions. We propose Reactive Interaction-Guided Diffusion (RIGD), an interaction-adaptive diffusion framework for safety-critical scenario generation. RIGD uses interact…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.1016/j.aap.2026.108793</code> / <code>dislike</code></li>
+</ul>
+<h3>9. <a href="https://arxiv.org/abs/2508.19204">LSD-3D: Large-Scale 3D Driving Scene Generation with Geometry Grounding</a></h3>
+<ul>
+<li>子方向：场景生成 / 基于扩散模型的动态场景生成　|　日期：　|　来源：deepseek_search</li>
+<li>作者：</li>
+<li><strong>综合分 7.4</strong>　嵌入相关 0.71　质量 0.51　LLM: 相关9 新颖7 实验6 入门4</li>
+<li>刊会: AAAI；作者最高 h-index: 55</li>
+<li>📝 TL;DR：用几何接地生成大规模3D驾驶场景，改善长轨迹渲染一致性。</li>
+<li>💡 理由：属于驾驶场景生成方向，适合仿真数据扩增；但偏静态或视频生成，动态交通建模有限。</li>
+<li><a href="https://arxiv.org/pdf/2508.19204">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2508.19204">arXiv</a></li>
+<li>摘要：Early methods offer control via text prompt [78], image [116], or camera position [73, 105]. Recent methods like GEN3C [70, 84] or GeoDrive [7] for driving scenes incorporate 3D conditioning and point projection to improve geometric consistency. Specialized models, such as Vista [24], MagicDrive [23, 22], or DriveDreamer [93], have been developed on top of foundational video models [3] for autonomous driving applications – employing bounding box, HD-map, and dense voxel guidance for feature control. These methods extend pre-trained video diffusion models to generate videos which mimic driving …</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2508.19204</code> / <code>dislike</code></li>
+</ul>
+<h3>10. <a href="https://arxiv.org/abs/2610.35448">Model-Aware Generation of Safety-Critical Scenes for Robust End-to-End Driving via Distilled Planner Surrogates</a></h3>
+<ul>
+<li>子方向：场景生成 / 车辆约束下的对抗场景生成　|　日期：2026-10-26　|　来源：semantic_scholar</li>
+<li>作者：Khaled Seyam, Julian Wiederer, Samar Fathalah, Markus Braun, Bin Yang University of Stuttgart, Germany 等</li>
+<li><strong>综合分 7.3</strong>　嵌入相关 0.95　质量 0.01　LLM: 相关9 新颖8 实验7 入门5</li>
+<li>实验关键词: closed-loop；作者最高 h-index: 2</li>
+<li>📝 TL;DR：用规划头蒸馏的可微代理在BEV层攻击特定端到端规划器，生成模型感知的安全关键训练场景。</li>
+<li>💡 理由：指出碰撞源于规划失败，并做模型感知的定向对抗场景生成，思路新颖且与端到端驾驶测试结合紧密。</li>
+<li><a href="https://arxiv.org/pdf/2610.35448">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2610.35448">arXiv</a></li>
+<li>摘要：End-to-end driving models perform well on standard benchmarks but collide frequently in safety-critical scenarios. We present a failure-mode analysis on NeuroNCAP which shows that 95.9% of DiffusionDrive's collisions are planning failures despite reliable detection, pinpointing the bottleneck in planning rather than perception. We attribute this to a fundamental data imbalance, as safety-critical interactions are rare in real driving logs, so planners are hardly ever trained on them. We close this gap with a novel model-aware framework that generates safety-critical training scenes against a s…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2610.35448</code> / <code>dislike</code></li>
+</ul>
+<h3>11. <a href="https://arxiv.org/abs/2607.10630">World Models as Adversaries: Multi-Agent Self-Play Fine-Tuning for Robust Motion Planning</a></h3>
+<ul>
+<li>子方向：场景生成 / 车辆约束下的对抗场景生成　|　日期：2026-07-12　|　来源：deepseek_search</li>
+<li>作者：Tong Nie, Yuewen Mei, Junlin He, Yihong Tang, Jian Sun, Wei Ma</li>
+<li><strong>综合分 6.9</strong>　嵌入相关 0.61　质量 0.43　LLM: 相关8 新颖7 实验7 入门3</li>
+<li>刊会: NeurIPS；备注: Accepted at NeurIPS 2026；实验关键词: nuplan, closed-loop；作者最高 h-index: 9</li>
+<li>📝 TL;DR：把世界模型变成角色条件对抗者，用多智能体自博弈微调提升运动规划的鲁棒性。</li>
+<li>💡 理由：面向道路车辆规划的对抗场景生成与鲁棒训练，min-max 建模清晰，与对抗场景子方向高度契合。</li>
+<li><a href="https://arxiv.org/pdf/2607.10630">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2607.10630">arXiv</a></li>
+<li>摘要：Robust motion planning in dense traffic requires autonomous vehicles to interact in rare and safety-critical scenarios that are underrepresented in naturalistic driving data. Although adversarial training offers a feasible solution, existing methods often rely on external scenario generators, heuristic perturbations, or simulator-heavy rollouts, which makes them difficult to integrate with modern autoregressive planners. Here, we cast adversarially robust planner learning as a constrained min-max game and propose Adversarial World Modeling (AWM), a theoretically grounded multi-agent self-play …</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2607.10630</code> / <code>dislike</code></li>
+</ul>
+<h3>12. <a href="https://doi.org/10.1109/tits.2026.3730710">Generation of Synthetic Datasets of Highway Driving Scenarios</a></h3>
+<ul>
+<li>子方向：场景生成 / 场景数据管理、标注与后处理　|　日期：2026-11-01　|　来源：semantic_scholar</li>
+<li>作者：M. Cossu, Riccardo Berta, Luca Lazzaroni, Luca Forneris, Matteo Fresta, Alessandro Pighetti 等</li>
+<li><strong>综合分 6.6</strong>　嵌入相关 0.96　质量 0.13　LLM: 相关8 新颖6 实验6 入门8</li>
+<li>实验关键词: carla；作者最高 h-index: 35</li>
+<li>📝 TL;DR：用OpenSCENARIO 2.0与CARLA从真实交通数据分布批量生成带场景标签的高速合成视频数据集并公开。</li>
+<li>💡 理由：场景建模、标注与数据集构建流程完整，工程参考价值高，适合入门了解场景数据管理。</li>
+<li><a href="https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421f4f848d228226f/10.1109/tits.2026.3730710">WebVPN</a> · <a href="https://doi.org/10.1109/tits.2026.3730710">DOI</a></li>
+<li>摘要：Driving scenario recognition is crucial for vehicle context adaptivity, decision-making, and automated driving function validation. However, research in this area is limited by a critical shortage of publicly available, scenario-labeled video datasets. To bridge this gap, we propose a system for generating scenario-labeled synthetic video clips from statistical distributions of traffic datapoints. Leveraging the large-scale, real-world, proprietary MOOVE collection, we generated and publicly released a 9-class dataset featuring varied highway conditions. Based on our experience, key insights f…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.1109/tits.2026.3730710</code> / <code>dislike</code></li>
+</ul></body>

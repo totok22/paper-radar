@@ -1,0 +1,164 @@
+<!doctype html><meta charset='utf-8'><title>Paper Radar 2026-11-10</title><body style='max-width:900px;margin:auto;font-family:sans-serif;line-height:1.6'><h1>📡 Paper Radar 日报 2026-11-10</h1>
+<blockquote>
+<p>来源召回：{'arxiv': 329, 'openalex': 64, 'journals': 21, 'semantic_scholar': 0, 'deepseek_search': 21}　→ 去重后 344　→ 嵌入预筛 40　→ 推送 12　|　嵌入: api　评分: LLM(deepseek-flash)</p>
+</blockquote>
+<h2>运动规划（7）</h2>
+<h3>1. <a href="https://arxiv.org/abs/2611.10720">Locating and Repairing Domain Shift in VLM Trajectory Planning</a></h3>
+<ul>
+<li>子方向：运动规划 / 视觉语言大模型-场景行为映射　|　日期：2026-11-07　|　来源：arxiv</li>
+<li>作者：Zhihong Cui, Hengyu Liu, Michael Alexander Riegler, Guandong Xu, Amir Taherkordi, Tor Skeie</li>
+<li><strong>综合分 7.2</strong>　嵌入相关 0.74　质量 0.40　LLM: 相关8 新颖7 实验8 入门5</li>
+<li>刊会: NeurIPS；备注: Accepted at NeurIPS 2026 (Main Track). 30 pages, 7 figures, 16 tables. Code: https://github.com/ZhihongCui/MoLaRx；实验关键词: nuscenes, argoverse, github.com</li>
+<li>📝 TL;DR：按模态与网络层定位并修复VLM轨迹规划器的跨城市域偏移。</li>
+<li>💡 理由：NeurIPS主track，激活修补分析扎实，对VLM驾驶规划的可迁移性有启发，需一定基础。</li>
+<li><a href="https://arxiv.org/pdf/2611.10720">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.10720">arXiv</a> · <a href="https://github.com/ZhihongCui/MoLaRx">代码</a></li>
+<li>摘要：Vision-Language Models (VLMs) are increasingly adopted as end-to-end driving planners, yet they suffer from cross-city domain shift. Existing methods treat this shift as a single quantity addressed by uniform alignment or single-site editing. We challenge this view on two counts: (i) domain shift in VLM trajectory planners is inherently structured across modality and layer, and (ii) a locate-then-repair recipe matched to this structure outperforms every uniform-objective baseline. We analyse domain shift via activation patching and uncover two regularities. (F1) Modality axis. Image and text t…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.10720</code> / <code>dislike</code></li>
+</ul>
+<h3>2. <a href="https://arxiv.org/abs/2611.12382">AutoVLA-D: Learn a Trajectory-Geometric Condition from Reasoning for Autonomous Driving VLA</a></h3>
+<ul>
+<li>子方向：运动规划 / 视觉语言大模型-场景行为映射　|　日期：2026-11-09　|　来源：arxiv</li>
+<li>作者：Yuguang Yang, Zhewen Tan, Canyu Chen, Linlin Yang, Cheng Chi, Chunyang Liu 等</li>
+<li><strong>综合分 6.7</strong>　嵌入相关 0.77　质量 0.40　LLM: 相关8 新颖6 实验6 入门7</li>
+<li>刊会: NeurIPS；备注: Accepted by NeurIPS 2026；实验关键词: nuscenes, navsim, closed-loop, github.com, code is available</li>
+<li>📝 TL;DR：用离散轨迹几何条件作VLA中间表示，先预测基元再回归连续轨迹。</li>
+<li>💡 理由：面向NAVSIM/nuScenes的VLA规划，将推理映射到轨迹基元，思路直观，适合入门阅读。</li>
+<li><a href="https://arxiv.org/pdf/2611.12382">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.12382">arXiv</a> · <a href="https://github.com/ShivaTeam/AutoVLA-D">代码</a></li>
+<li>摘要：Autoregressive VLA planning usually predicts continuous trajectories as the final output, but driving instructions often describe actions rather than ego states, which weakens direct conditioning on the final continuous trajectory. We address this gap with TrajCond, which introduces a discrete trajectory-geometric condition for VLA planning. Specifically, we represent TrajCond as a 1D-Brohan differential action trajectory and learn it with a two-stage training framework before final continuous trajectory prediction. With the simultaneous autoregressive generation of discrete and numeric trajec…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.12382</code> / <code>dislike</code></li>
+</ul>
+<h3>3. <a href="https://arxiv.org/abs/2611.11532">DriveFoundry: Co-Evolving Data and Model for Efficient Closed-Loop Iteration in Autonomous Driving</a></h3>
+<ul>
+<li>子方向：运动规划 / 视觉语言大模型-场景行为映射　|　日期：2026-11-08　|　来源：arxiv, deepseek_search</li>
+<li>作者：Ziyang Yao, Yuncheng Jiang, Fang Li, Haochen Liu, Shaoqing Xu, Wen Zhang 等</li>
+<li><strong>综合分 6.6</strong>　嵌入相关 1.00　质量 0.00　LLM: 相关8 新颖7 实验6 入门5</li>
+<li>备注: 57 pages, 31 figures, Project page: https://Xiaomi-EV.github.io/Xiaomi-Drive-o1；实验关键词: real-vehicle, closed-loop, project page</li>
+<li>📝 TL;DR：小米提出闭环框架，用数据引擎与自适应推理让VLM驾驶基座模型高效迭代。</li>
+<li>💡 理由：VLM统一感知-因果-决策并映射到候选轨迹，配合反事实标注闭环，属场景到行为映射方向，工程价值高。</li>
+<li><a href="https://arxiv.org/pdf/2611.11532">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.11532">arXiv</a></li>
+<li>摘要：A driving foundation model must learn reusable decision knowledge from rare critical events and apply it under strict runtime constraints. We introduce DriveFoundry, a closed-loop framework improving iteration efficiency under data and computation budgets by coupling structured causal data refinement with adaptive inference. The Data Engine builds traceable scene-candidate records linking scene evidence and factor-decision relations to candidate trajectories and outcome assessments. Candidate comparisons and counterfactual annotations clarify how scene factors affect behavioral feasibility and…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.11532</code> / <code>dislike</code></li>
+</ul>
+<h3>4. <a href="https://doi.org/10.1109/tits.2026.3742396">Bridging Simulation and Reality: A Latent Alignment World Model for End-to-End Autonomous Driving</a></h3>
+<ul>
+<li>子方向：运动规划 / 视觉语言大模型-场景行为映射　|　日期：2026-01-01　|　来源：deepseek_search</li>
+<li>作者：Jiatong Du, Ye Li, Huailong Peng, Meng Li, Yanjun Huang, Hong Chen</li>
+<li><strong>综合分 6.4</strong>　嵌入相关 0.87　质量 0.30　LLM: 相关7 新颖6 实验6 入门5</li>
+<li>刊会: Transactions on Intelligent Transportation；实验关键词: nuscenes, carla, real-world vehicle</li>
+<li>📝 TL;DR：用潜空间对齐世界模型做仿真到真实迁移，BEV重建与轨迹规划共享表征。</li>
+<li>💡 理由：端到端驾驶中世界模型与规划联合建模，属场景表征到轨迹映射，但非VLM路线，创新中等。</li>
+<li><a href="https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421f4f848d228226f/10.1109/tits.2026.3742396">WebVPN</a> · <a href="https://doi.org/10.1109/tits.2026.3742396">DOI</a></li>
+<li>探索位：这条不是纯按分数挤进来的，用来补一个还没被代表的方向</li>
+<li>摘要：Bridging Simulation and Reality: A Latent Alignment World Model for End-to-End Autonomous Driving
+...
+End-to-end autonomous driving (E2EAD) paradigms impose substantial demands on large-scale, labeled real-world data, posing significant challenges for cost-effective and scalable deployment. To address this challenge, this paper proposes a Latent Alignment World Model (LA-WM) for Sim-to-Real transfer that aligns latent semantic representations across domains. Specifically, the LA-WM employs a world model architecture wherein visual observations are encoded into latent environmental dynamics, co…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.1109/tits.2026.3742396</code> / <code>dislike</code></li>
+</ul>
+<h3>5. <a href="https://ieeexplore.ieee.org/document/11773351#1">RAD-2: Scaling Reinforcement Learning in a Generator-Discriminator Framework - RAD-2: Scaling Reinforcement Learning in a Generator-Discriminator Framework</a></h3>
+<ul>
+<li>子方向：运动规划 / 基元的扩展与选择 + DMP 算法　|　日期：　|　来源：deepseek_search</li>
+<li>作者：</li>
+<li><strong>综合分 6.0</strong>　嵌入相关 0.81　质量 0.00　LLM: 相关7 新颖7 实验6 入门5</li>
+<li>实验关键词: closed-loop</li>
+<li>📝 TL;DR：扩散生成多候选轨迹、RL判别器重排序的闭环规划框架。</li>
+<li>💡 理由：面向自动驾驶的候选轨迹生成与选择式闭环规划，与基元生成-选择思路相通，可关注其负反馈修正机制。</li>
+<li>摘要：RAD-2: Scaling Reinforcement Learning in a Generator-Discriminator Framework</li>
+</ul>
+<p>High-level autonomous driving requires motion planners capable of modeling multimodal future uncertainties while remaining robust in closed-loop interactions.
+...
+Although diffusion-based planners are effective at modeling complex trajectory distributions, they often suffer from stochastic instabilities and the lack of corrective negative feedback when trained purely with imitation learning. To address these issues, we propose RAD-2, a unified generator-discriminator framework for closed-loop planning. Specifically,…
+- 反馈：<code>python -m paper_radar feedback like title:rad 2 scaling reinforcement learning in a generator discriminator framework rad 2 scaling reinforcement learning in a ge</code> / <code>dislike</code></p>
+<h3>6. <a href="https://arxiv.org/abs/2611.10632">Latent-WAM++: Shaping World and Action Representations for End-to-End Autonomous Driving</a></h3>
+<ul>
+<li>子方向：运动规划 / 视觉语言大模型-场景行为映射　|　日期：2026-11-07　|　来源：arxiv, deepseek_search</li>
+<li>作者：Yichen Zhang, Yupeng Zheng, Linbo Wang, Pengxuan Yang, Zebin Xing, Junli Wang 等</li>
+<li><strong>综合分 5.7</strong>　嵌入相关 0.72　质量 0.00　LLM: 相关7 新颖6 实验6 入门4</li>
+<li>备注: 16 pages, including supplementary material；实验关键词: navsim</li>
+<li>📝 TL;DR：以世界与动作表示为中心的端到端驾驶框架，为每层表示匹配监督。</li>
+<li>💡 理由：端到端驾驶表示学习，与场景到轨迹映射相关，但偏表征工程，细节较重。</li>
+<li><a href="https://arxiv.org/pdf/2611.10632">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.10632">arXiv</a></li>
+<li>探索位：这条不是纯按分数挤进来的，用来补一个还没被代表的方向</li>
+<li>摘要：Computer Science &gt; Computer Vision and Pattern Recognition</li>
+</ul>
+<p>arXiv:2611.10632 (cs)</p>
+<p>[Submitted on 7 Nov 2026]</p>
+<p>Title:Latent-WAM++: Shaping World and Action Representations for End-to-End Autonomous Driving</p>
+<p>View a PDF of the paper titled Latent-WAM++: Shaping World and Action Representations for End-to-End Autonomous Driving, by Yichen Zhang and 12 other authors
+...
+Abstract:We introduce Latent-WAM++, a representation-centered World Action Model (WAM) for end-to-end autonomous driving. Existing WAMs are primarily trained to predict future states or final actions, leaving the intermediate world …
+- 反馈：<code>python -m paper_radar feedback like arxiv:2611.10632</code> / <code>dislike</code></p>
+<h3>7. <a href="https://arxiv.org/abs/2611.11856">DeltaForge: A Post-hoc Mixture-of-Experts VLA for Multi-Domain Autonomous Driving</a></h3>
+<ul>
+<li>子方向：运动规划 / 视觉语言大模型-场景行为映射　|　日期：2026-11-09　|　来源：arxiv</li>
+<li>作者：Bingzhang Wang, Mo Poorsartep, Yasaman Esfandiari</li>
+<li><strong>综合分 5.6</strong>　嵌入相关 0.65　质量 0.00　LLM: 相关7 新颖6 实验6 入门5</li>
+<li>📝 TL;DR：用SVD分解权重增量，后验合并多个域VLA驾驶模型为统一专家。</li>
+<li>💡 理由：多域VLA驾驶模型合并，工程价值高，但偏系统集成而非规划方法本身。</li>
+<li><a href="https://arxiv.org/pdf/2611.11856">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.11856">arXiv</a></li>
+<li>探索位：这条不是纯按分数挤进来的，用来补一个还没被代表的方向</li>
+<li>摘要：Fleets of driving vision-language-action (VLA) models are developed one domain at a time: each operator finetunes a shared base model on private data, producing specialized experts that are costly to consolidate into a single model. Weight merging loses accuracy as heterogeneous domains accumulate, and dense mixture-of-experts routing is prohibitively expensive to combine them. We present DeltaForge, to our knowledge the first post-hoc mixture-of-experts VLA for driving, which consolidates N independently finetuned per-domain models into a single multi-domain model from their weights and a sma…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.11856</code> / <code>dislike</code></li>
+</ul>
+<h2>运动控制（1）</h2>
+<h3>8. <a href="https://doi.org/10.1109/access.2026.3751328">Trajectory Tracking Control for Distributed Electric Vehicles Based on Dynamic Stability Region and Rollover Warning Time</a></h3>
+<ul>
+<li>子方向：运动控制 / MPC 与车辆控制器部署　|　日期：2026-01-01　|　来源：deepseek_search</li>
+<li>作者：Jianjun Hu, Yanfu Liu, Hongkai Liu, Xingwei Ji, Junkai Shao</li>
+<li><strong>综合分 6.0</strong>　嵌入相关 0.85　质量 0.00　LLM: 相关7 新颖6 实验7 入门5</li>
+<li>📝 TL;DR：分布式电动车轨迹跟踪：动态稳定域+侧翻预警时间的多目标MPC自适应权重协调。</li>
+<li>💡 理由：面向道路车辆的MPC轨迹跟踪，把稳定域约束与侧翻预警耦合进权重调节，工程性强，适合作为MPC约束/权重设计的参考。</li>
+<li><a href="https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421f9f244993f20645f6c0dc7a59d50267b1ab4a9/document/11782181">WebVPN</a> · <a href="https://ieeexplore.ieee.org/servlet/wayf.jsp?entityId=https%3A%2F%2Fidp.bit.edu.cn%2Fidp%2Fshibboleth&amp;url=https%3A%2F%2Fieeexplore.ieee.org%2Fdocument%2F11782181">CARSI</a> · <a href="https://doi.org/10.1109/access.2026.3751328">DOI</a></li>
+<li>摘要：Trajectory Tracking Control for Distributed Electric Vehicles Based on Dynamic Stability Region and Rollover Warning Time
+...
+Focusing on trajectory conservatism caused by over-constraining the stability region during trajectory tracking of distributed electric vehicles and the lack of forward-looking rollover warnings, this paper proposes an integrated trajectory-tracking control method based on a dynamic stability region and rollover warning time. First, a dynamic stability region considering direct yaw control (DYC) intervention is constructed from the phase plane of sideslip angle and yaw …</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.1109/access.2026.3751328</code> / <code>dislike</code></li>
+</ul>
+<h2>场景生成（4）</h2>
+<h3>9. <a href="https://arxiv.org/abs/2611.11516">Breaking survivorship bias in driving world models</a></h3>
+<ul>
+<li>子方向：场景生成 / 基于扩散模型的动态场景生成　|　日期：2026-11-08　|　来源：arxiv</li>
+<li>作者：Zihao Sheng, Zilin Huang, Yuhao Luo, Zhengyang Wan, Boyue Wang, Soyoung Ahn 等</li>
+<li><strong>综合分 6.7</strong>　嵌入相关 0.85　质量 0.00　LLM: 相关8 新颖8 实验7 入门6</li>
+<li>备注: Project Website: https://zihaosheng.github.io/NWM/；实验关键词: navsim</li>
+<li>📝 TL;DR：指出驾驶世界模型的幸存者偏差，用事故视频训练中性世界模型预测碰撞未来并辅助决策。</li>
+<li>💡 理由：道路驾驶世界模型/未来轨迹生成，用事故数据补足安全关键未来，对场景生成与规划评估都有启发。</li>
+<li><a href="https://arxiv.org/pdf/2611.11516">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.11516">arXiv</a></li>
+<li>摘要：World models allow autonomous vehicles to imagine the consequences of candidate actions before execution, but their reliability depends on the futures represented in their training data. We identify a survivorship bias in driving world models: because the futures recorded in prevailing driving datasets almost always end safely, existing models often imagine benign outcomes even when a collision is imminent. We introduce a neutral world model (NWM) that learns both routine and safety-critical futures from a mixture of routine driving and real accident videos with a bounding-box-guided objective…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.11516</code> / <code>dislike</code></li>
+</ul>
+<h3>10. <a href="https://arxiv.org/abs/2611.10821">AmodalBox: Automated 3D Bounding Box Annotation under Partial Visibility</a></h3>
+<ul>
+<li>子方向：场景生成 / 场景数据管理、标注与后处理　|　日期：2026-11-07　|　来源：arxiv</li>
+<li>作者：In-Jae Lee, Namtae Kim, Robert Exley, Kwonyoung Ryu, Jaesik Park</li>
+<li><strong>综合分 5.6</strong>　嵌入相关 0.55　质量 0.40　LLM: 相关6 新颖6 实验6 入门6</li>
+<li>刊会: CoRL；备注: Accepted by CoRL 2026；实验关键词: nuscenes, waymo, project page</li>
+<li>📝 TL;DR：借图像生成3D资产作非模态先验，自动补全稀疏驾驶场景中被遮挡目标的3D框标注。</li>
+<li>💡 理由：面向驾驶数据的自动标注与后处理，属场景数据管理，工程实用、易上手。</li>
+<li><a href="https://arxiv.org/pdf/2611.10821">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.10821">arXiv</a></li>
+<li>摘要：Recent progress in vision foundation models (VFMs) has made automated open-vocabulary 3D bounding box annotation increasingly feasible by jointly leveraging LiDAR point clouds and images. However, partial observations remain a major challenge in sparse driving scenes, where visible LiDAR points often cover only a small fraction of the object's surface and provide insufficient cues for estimating its full spatial extent. As a result, existing methods often produce mislocalized boxes or leave objects unlabeled. To address this limitation, we propose \textbf{\Ours{}}, an automated annotation fram…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.10821</code> / <code>dislike</code></li>
+</ul>
+<h3>11. <a href="https://arxiv.org/abs/2611.10506">SRA: Spatial Reasoning Adapter via Evolving Social Interaction Graphs for Trajectory Prediction</a></h3>
+<ul>
+<li>子方向：场景生成 / 基于扩散模型的动态场景生成　|　日期：2026-11-07　|　来源：arxiv</li>
+<li>作者：Jaewoo Jeong, Seonkyu Song, Hyeonwoo Park, Jegyeong Cho, Yujin Bae, Giwon Lee 等</li>
+<li><strong>综合分 5.5</strong>　嵌入相关 0.47　质量 0.40　LLM: 相关6 新颖6 实验6 入门5</li>
+<li>刊会: NeurIPS；备注: Accepted to NeurIPS 2026；实验关键词: github.com, code is available</li>
+<li>📝 TL;DR：在扩散/流匹配轨迹预测器的每个反向步构建稀疏交互图并做残差修正，实现空间推理自适应。</li>
+<li>💡 理由：面向自动驾驶多智能体轨迹生成的扩散式方法，与场景生成子方向相关，但属预测而非规划控制，可作边缘参考。</li>
+<li><a href="https://arxiv.org/pdf/2611.10506">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.10506">arXiv</a> · <a href="https://github.com/Jaewoo97/SRA">代码</a></li>
+<li>摘要：Predicting where multiple agents will move next is fundamental to autonomous driving, robotics, and any system that must share space with people safely. Modern stochastic predictors read off inter-agent interactions once from the observed past and keep that view fixed throughout the generative rollout, so the reciprocal geometric constraints that emerge as the joint future sharpens are not re-examined. We address this gap with SRA (Spatial Reasoning Adapter), a modular graph denoiser that is integrated into existing diffusion and flow-matching predictors without redesigning their generative co…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.10506</code> / <code>dislike</code></li>
+</ul>
+<h3>12. <a href="https://arxiv.org/abs/2611.11627">Attack Injection to Vehicle Reactions: Extensible Closed-Loop Adversarial Evaluation Framework</a></h3>
+<ul>
+<li>子方向：场景生成 / 车辆约束下的对抗场景生成　|　日期：2026-11-08　|　来源：deepseek_search</li>
+<li>作者：Mohamed Gaber, Tahsin Wahid, Mohammad Mamun, Salimur Choudhury</li>
+<li><strong>综合分 5.2</strong>　嵌入相关 0.89　质量 0.00　LLM: 相关6 新颖5 实验5 入门6</li>
+<li>备注: 6 pages, 3 figures, 5 tables；实验关键词: closed-loop</li>
+<li>📝 TL;DR：在VaN3Twin上构建可扩展闭环框架，注入V2X伪造消息评估自动驾驶反应。</li>
+<li>💡 理由：面向道路车辆的对抗攻击注入与闭环评测，含76种攻击配置，但偏评测平台而非生成方法。</li>
+<li><a href="https://arxiv.org/pdf/2611.11627">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.11627">arXiv</a></li>
+<li>摘要：Autonomous vehicles can use information exchanged with other vehicles and roadside infrastructure to support driving decisions. However, applications that rely on this information can make unsafe decisions when it is falsified. Studying the resulting traffic effects requires following received information through application decisions, vehicle reactions, and subsequent interactions. We present an extensible closed-loop adversarial evaluation framework built on VaN3Twin, a platform for traffic and wireless network simulation, with a diverse attack library and a labelled dataset covering benign …</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.11627</code> / <code>dislike</code></li>
+</ul></body>

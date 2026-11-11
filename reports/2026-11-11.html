@@ -1,0 +1,149 @@
+<!doctype html><meta charset='utf-8'><title>Paper Radar 2026-11-11</title><body style='max-width:900px;margin:auto;font-family:sans-serif;line-height:1.6'><h1>📡 Paper Radar 日报 2026-11-11</h1>
+<blockquote>
+<p>来源召回：{'arxiv': 402, 'openalex': 70, 'journals': 20, 'semantic_scholar': 78, 'deepseek_search': 27}　→ 去重后 438　→ 嵌入预筛 40　→ 推送 12　|　嵌入: api　评分: LLM(deepseek-flash)</p>
+</blockquote>
+<h2>运动规划（5）</h2>
+<h3>1. <a href="https://arxiv.org/abs/2510.04532">More Than Meets the Eye? Uncovering the Reasoning-Planning Disconnect in Training Vision-Language Driving Models</a></h3>
+<ul>
+<li>子方向：运动规划 / 视觉语言大模型-场景行为映射　|　日期：2025-10-06　|　来源：deepseek_search</li>
+<li>作者：Xurui Song, Shuo Huai, JingJing Jiang, Jiayi Kong, Jun Luo</li>
+<li><strong>综合分 7.5</strong>　嵌入相关 0.95　质量 0.16　LLM: 相关9 新颖7 实验8 入门5</li>
+<li>刊会: NeurIPS；备注: NeurIPS 2026；实验关键词: nuplan</li>
+<li>📝 TL;DR：基于nuPlan构建带思维链的驾驶VQA数据，实证VLM推理与轨迹规划存在因果脱节。</li>
+<li>💡 理由：VLM端到端驾驶中推理-规划关系的关键负面结论，实验严谨，值得关注。</li>
+<li><a href="https://arxiv.org/pdf/2510.04532">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2510.04532">arXiv</a></li>
+<li>摘要：Vision-Language Model (VLM) driving agents promise explainable end-to-end autonomy by first producing natural-language reasoning and then predicting trajectory planning. However, whether planning is causally driven by this reasoning remains a critical but unverified assumption. To investigate this, we build DriveMind, a large-scale driving Visual Question Answering corpus with plan-aligned Chain-of-Thought (CoT), automatically generated from nuPlan. Our data generation process converts sensors and annotations into structured inputs and, crucially, separates priors from to-be-reasoned signals, …</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2510.04532</code> / <code>dislike</code></li>
+</ul>
+<h3>2. <a href="https://arxiv.org/abs/2603.12421">A Neuro-Symbolic Framework Combining Inductive and Deductive Reasoning for Autonomous Driving Planning</a></h3>
+<ul>
+<li>子方向：运动规划 / 大模型驱动的行为基元库增量式扩展　|　日期：2026-03-12　|　来源：deepseek_search</li>
+<li>作者：Hongyan Wei, Wael AbdAlmageed</li>
+<li><strong>综合分 6.9</strong>　嵌入相关 0.99　质量 0.20　LLM: 相关8 新颖7 实验6 入门4</li>
+<li>刊会: WACV；备注: Accepted to WACV 2027；实验关键词: nuscenes</li>
+<li>📝 TL;DR：用LLM抽取场景规则、ASP求解器做逻辑仲裁，再解码为连续轨迹的神经符号规划框架。</li>
+<li>💡 理由：LLM驱动离散驾驶决策生成并接入轨迹规划，契合LLM运动规划子方向，思路新颖可读。</li>
+<li><a href="https://arxiv.org/pdf/2603.12421">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2603.12421">arXiv</a></li>
+<li>摘要：Existing end-to-end autonomous driving models rely heavily on purely data-driven inductive reasoning. This "black-box" nature limits interpretability and makes safety-critical planning challenging in complex, long-tail scenarios. To overcome this bottleneck, we propose a novel neuro-symbolic trajectory planning (NS-Plan) framework, which integrates rigorous deductive reasoning into end-to-end neural networks. Specifically, our framework utilizes a Large Language Model (LLM) to dynamically extract scene rules and employs an Answer Set Programming (ASP) solver for deterministic logical arbitrati…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2603.12421</code> / <code>dislike</code></li>
+</ul>
+<h3>3. <a href="https://arxiv.org/abs/2611.13494">Route-Time Conflict Maps for Cooperative End-to-End Autonomous Driving</a></h3>
+<ul>
+<li>子方向：运动规划 / 视觉语言大模型-场景行为映射　|　日期：2026-11-10　|　来源：arxiv</li>
+<li>作者：Haohua Que, Mingkai Liu, Tianle Zhu, Zhipeng Bao, Yiping Li, Handong Yao</li>
+<li><strong>综合分 6.4</strong>　嵌入相关 0.58　质量 0.00　LLM: 相关9 新颖7 实验6 入门5</li>
+<li>实验关键词: carla, closed-loop</li>
+<li>📝 TL;DR：提出When2Go协作式端到端驾驶，用路径-时间冲突图共享意图来决定何时通行。</li>
+<li>💡 理由：面向道路车辆协同规划，冲突图+让行门控思路清晰，对端到端规划有参考价值。</li>
+<li><a href="https://arxiv.org/pdf/2611.13494">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.13494">arXiv</a></li>
+<li>摘要：Existing cooperative end-to-end driving works at Class A (status-sharing) of the SAE J3216 classes of cooperative driving automation (CDA): vehicles exchange what they perceive, not what they intend, so each plans alone when to go, which limits cooperation and leads to deadlock when both vehicles yield or to collisions when both go. We present When2Go, a cooperative end-to-end driving system that learns when to go by sharing intent under CDA Class B or higher. Each vehicle broadcasts its LiDAR detections with forecast motion as instance tokens, together with its plan and intended trajectory. T…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.13494</code> / <code>dislike</code></li>
+</ul>
+<h3>4. <a href="https://arxiv.org/abs/2605.21061">Grounding Driving VLA via Inverse Kinematics</a></h3>
+<ul>
+<li>子方向：运动规划 / 视觉语言大模型-场景行为映射　|　日期：2026-05-20　|　来源：deepseek_search</li>
+<li>作者：Junsung Park, Hyunjung Shim</li>
+<li><strong>综合分 6.3</strong>　嵌入相关 0.80　质量 0.00　LLM: 相关8 新颖7 实验6 入门6</li>
+<li>实验关键词: nuscenes, navsim</li>
+<li>📝 TL;DR：指出驾驶VLA忽视前车障碍的捷径问题，用未来视觉状态预测与逆运动学扩散网络解码轨迹。</li>
+<li>💡 理由：驾驶VLA场景到轨迹映射的失效分析与改进，反事实插入实验有说服力，适合入门跟进VLA规划。</li>
+<li><a href="https://arxiv.org/pdf/2605.21061">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2605.21061">arXiv</a></li>
+<li>摘要：Counterfactual obstacle insertion exposes blind planning in representative Driving VLAs: their trajectories remain largely unchanged despite a vehicle appearing directly ahead. An empirically calibrated bias-variance analysis identifies how ego-predictable training examples admit a shortcut through ego status and commands. We address this failure with an inverse-kinematics-inspired architecture that anchors trajectory decoding on current and predicted future visual states. First, a next visual state prediction objective that requires the LLM to predict the future visual scene provides dense vi…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2605.21061</code> / <code>dislike</code></li>
+</ul>
+<h3>5. <a href="https://arxiv.org/abs/2611.14414">SIGMO: Sigmoid Gated Interaction-Aware Motion Planning</a></h3>
+<ul>
+<li>子方向：运动规划 / 基元的扩展与选择 + DMP 算法　|　日期：2026-11-10　|　来源：arxiv</li>
+<li>作者：Avinash Singh, Manish Saroya, Fatemeh Cheraghi Pouria, Faizan Tariq, Jovin D'sa, David Isele 等</li>
+<li><strong>综合分 5.8</strong>　嵌入相关 0.81　质量 0.00　LLM: 相关7 新颖6 实验6 入门6</li>
+<li>备注: Submitted to IEEE；实验关键词: hardware experiment</li>
+<li>📝 TL;DR：用Sigmoid门控的解析多项式基元实现多智能体交互感知运动规划，兼顾可解释与实时。</li>
+<li>💡 理由：面向自动驾驶换道、无信号路口等道路场景的交互式规划，基元门控思路可借鉴；理论深度一般。</li>
+<li><a href="https://arxiv.org/pdf/2611.14414">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.14414">arXiv</a></li>
+<li>摘要：Despite the widespread adoption of autonomous vehicle technologies, reliable navigation within cluttered environments remains arduous due to the necessity of interaction-aware strategies; example scenarios include: narrow passages with multiple agents, lane changing in dense traffic, and crossing unsignalized intersections. These scenarios often require highly proactive strategies, simultaneously demanding interpretability and quick adaptability, which challenge end-to-end and data-driven methods. An effective strategy requires: scalability to multiple agents, adaptability to changes in other …</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.14414</code> / <code>dislike</code></li>
+</ul>
+<h2>运动控制（2）</h2>
+<h3>6. <a href="https://doi.org/10.3390/vehicles8110294">Heading-Sensorless Autonomous Vehicles: Luenberger-Based Linear MPC for Tracking and Safe Obstacle Avoidance</a></h3>
+<ul>
+<li>子方向：运动控制 / MPC 与车辆控制器部署　|　日期：2026-11-09　|　来源：openalex</li>
+<li>作者：Meryam El Mahri, Tarik Jarou, Younes El koudia, Hassan Mharzi, Salma Garmoum</li>
+<li><strong>综合分 6.7</strong>　嵌入相关 1.00　质量 0.00　LLM: 相关9 新颖5 实验6 入门7</li>
+<li>📝 TL;DR：用Luenberger观测器估计航向角，配合线性化LTI-MPC实现轨迹跟踪与静态障碍避让。</li>
+<li>💡 理由：面向道路车辆的MPC跟踪与避障工作，结构化清晰，适合入门理解MPC+观测器组合。</li>
+<li><a href="https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421f4f848d228226f/10.3390/vehicles8110294">WebVPN</a> · <a href="https://doi.org/10.3390/vehicles8110294">DOI</a></li>
+<li>摘要：Following a trajectory and avoiding obstacles are two closely linked control tasks for an autonomous vehicle. Classical reactive controllers are tuned for one operating range, do not look ahead and have no built-in way to keep a minimum distance from an obstacle. This paper presents a Linear Time-Invariant Model Predictive Control (LTI-MPC) scheme combined with a Luenberger observer for the kinematic bicycle model. The model is linearised once around (0,0,0,vnom) and written in deviation coordinates so that the drift term of the predictor is exact. The observer, tuned with the discrete-time al…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.3390/vehicles8110294</code> / <code>dislike</code></li>
+</ul>
+<h3>7. <a href="https://doi.org/10.1109/tits.2026.3749987">Generative Data-Driven MPC for Autonomous Driving Guidance at Freeway Accident Bottleneck</a></h3>
+<ul>
+<li>子方向：运动控制 / MPC 与车辆控制器部署　|　日期：2026-01-01　|　来源：deepseek_search</li>
+<li>作者：Xudong Qi, Yue Zuo, Guiping Wang, Ping Wang, Zhigang Xu</li>
+<li><strong>综合分 6.3</strong>　嵌入相关 0.86　质量 0.30　LLM: 相关7 新颖6 实验6 入门6</li>
+<li>刊会: Transactions on Intelligent Transportation</li>
+<li>📝 TL;DR：针对高速事故瓶颈，用元胞自动机数据训练Koopman近似的数据驱动MPC做集中式车速引导与可变限速。</li>
+<li>💡 理由：对象是高速道路自动驾驶车辆，MPC+数据驱动引导方向清晰；但生成模型部分描述含糊，验证多在仿真。</li>
+<li><a href="https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421f4f848d228226f/10.1109/tits.2026.3749987">WebVPN</a> · <a href="https://doi.org/10.1109/tits.2026.3749987">DOI</a></li>
+<li>摘要：Generative Data-Driven MPC for Autonomous Driving Guidance at Freeway Accident Bottleneck
+...
+Sudden accidents on freeways seriously disrupt traffic flow and easily induce secondary accidents, forming accident bottleneck segments with a tendency of congestion spreading. Inspired by the group operation rules of cellular automata, a centralized guidance strategy for autonomous vehicles (AVs) is designed to quickly release control commands and improve the safety and efficiency of mixed traffic flow. Firstly, the STCA model are improved, and a simulation environment that can characterize sudden ac…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.1109/tits.2026.3749987</code> / <code>dislike</code></li>
+</ul>
+<h2>场景生成（5）</h2>
+<h3>8. <a href="https://arxiv.org/abs/2611.13880">Towards Mode-Balanced Intersection Control: Hierarchical Coordination of Signal Timings, AV Trajectories, and Cyclist Speed Advice</a></h3>
+<ul>
+<li>子方向：场景生成 / 基于扩散模型的动态场景生成　|　日期：2026-11-10　|　来源：arxiv</li>
+<li>作者：Wies Siffels, Giray Önür, Azita Dabiri</li>
+<li><strong>综合分 5.1</strong>　嵌入相关 0.51　质量 0.00　LLM: 相关6 新颖6 实验7 入门6</li>
+<li>📝 TL;DR：分层协同优化信号配时、AV 轨迹与自行车速度建议，缩短交叉口通行时间。</li>
+<li>💡 理由：对象是道路交叉口与网联自动驾驶车辆，属车辆轨迹优化控制；但重点是信控协同而非单车控制器设计，可作为交叉口协同控制参考。</li>
+<li><a href="https://arxiv.org/pdf/2611.13880">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.13880">arXiv</a></li>
+<li>摘要：Connected and automated vehicles (AVs) enable traffic signals and vehicle trajectories to be optimised jointly, but existing co-optimisation frameworks overlook cyclists, even though they share the same intersections. We propose a hierarchical framework that optimises traffic signal timings, AV trajectories, and cyclist speed advice to reduce travel times for both motorised vehicles and cyclists. The upper level jointly optimises signal timings and cyclist speed advice, while the lower level optimises AV trajectories and also updates cyclist speed advice obtained from the higher level at a hig…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.13880</code> / <code>dislike</code></li>
+</ul>
+<h3>9. <a href="https://arxiv.org/abs/2611.06204">CoSafe: Cooperative Runtime Safety Assurance for Mixed-Traffic Autonomous Driving</a></h3>
+<ul>
+<li>子方向：场景生成 / 场景数据管理、标注与后处理　|　日期：2026-11-04　|　来源：semantic_scholar</li>
+<li>作者：Ding-Ji Wang, You Lu, Hao-Wen Jiang, Yang-Gang Chen, Yu-Yang Bi, B. Chen 等</li>
+<li><strong>综合分 5.0</strong>　嵌入相关 0.80　质量 0.00　LLM: 相关5 新颖6 实验6 入门6</li>
+<li>📝 TL;DR：提出模块化、与ADS无关的混行交通协同运行时安全保证框架，可监测并拦截多车联合冲突。</li>
+<li>💡 理由：对象是道路自动驾驶混行交通，属安全监控与接管干预，与车辆控制部署沾边但非规划/MPC核心，可作背景参考。</li>
+<li><a href="https://arxiv.org/pdf/2611.06204">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.06204">arXiv</a></li>
+<li>探索位：这条不是纯按分数挤进来的，用来补一个还没被代表的方向</li>
+<li>摘要：With the rapid development of autonomous driving systems (ADSes), real-world roads are evolving into mixed-traffic environments where autonomous vehicles (AVs) and other traffic participants (e.g., human-driven vehicles (HDVs), cyclists, and pedestrians) coexist and interact with each other. However, current ADSes still incur various safety violations in mixed traffic scenarios, raising a strong demand for runtime safety assurance frameworks that can continuously monitor hazards and prevent potential violations. Existing ego-centric assurance approaches are insufficient for mixed traffic, wher…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.06204</code> / <code>dislike</code></li>
+</ul>
+<h3>10. <a href="https://arxiv.org/abs/2611.06007">MotoVerse: A Benchmark for Predictive Perception of Motorized Two-Wheelers in Dense Unstructured Traffic</a></h3>
+<ul>
+<li>子方向：场景生成 / 场景数据管理、标注与后处理　|　日期：2026-11-04　|　来源：semantic_scholar</li>
+<li>作者：Varun A. Paturkar, Shankar Gangisetty, C. V. Jawahar</li>
+<li><strong>综合分 5.0</strong>　嵌入相关 0.52　质量 0.00　LLM: 相关6 新颖6 实验6 入门6</li>
+<li>实验关键词: github.com</li>
+<li>📝 TL;DR：MotoVerse：以两轮车自视角采集的密集非结构化交通基准，含3.1万交通体轨迹标注。</li>
+<li>💡 理由：面向道路ADAS/自动驾驶的两轮车预测感知数据集与挑战分类体系，数据挖掘与标注价值高，但偏感知预测而非规划控制。</li>
+<li><a href="https://arxiv.org/pdf/2611.06007">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.06007">arXiv</a> · <a href="https://github.com/VarunIIITH/MotoVerse">代码</a></li>
+<li>摘要：Motorized Two-Wheelers (MTWs) dominate personal transport across much of the Global South, yet remain largely overlooked in predictive perception research for autonomous driving and ADAS. We introduce MotoVerse, a benchmark for predictive perception from an MTW's ego-centric perspective. MotoVerse comprises 949 maneuver clips collected in dense, unstructured traffic and trajectory annotations for over 31,000 surrounding road agents, including over 16,000 MTWs, enabling two complementary tasks: Ego-Rider Maneuver Anticipation (ERMA) and Traffic Agent Trajectory Prediction (TATP). Each clip is f…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.06007</code> / <code>dislike</code></li>
+</ul>
+<h3>11. <a href="https://arxiv.org/abs/2611.11583">NightSteps: A Night-Time Dataset and Benchmark for Pedestrian Crossing Intention Prediction</a></h3>
+<ul>
+<li>子方向：场景生成 / 场景数据管理、标注与后处理　|　日期：2026-11-08　|　来源：arxiv</li>
+<li>作者：Sjoerd Takken, Shaodi You</li>
+<li><strong>综合分 4.5</strong>　嵌入相关 0.51　质量 0.00　LLM: 相关6 新颖4 实验5 入门7</li>
+<li>📝 TL;DR：NightSteps：六城市夜间行车记录仪数据集，用于行人过街意图预测基准。</li>
+<li>💡 理由：夜间弱光下道路行人意图预测数据集，填补夜间场景空白，与场景数据管理/挖掘相关，但方法创新有限。</li>
+<li><a href="https://arxiv.org/pdf/2611.11583">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.11583">arXiv</a></li>
+<li>摘要：Autonomous vehicles use pedestrian crossing intention prediction (PCIP) to participate safely in traffic. Existing models are largely trained under favourable daytime conditions with sufficient daylight. Little is known about the robustness of these models under night-time and low-light conditions, due to the lack of datasets containing night-time footage. This paper investigates how a dataset, named NightSteps, can be constructed and evaluated as a baseline benchmark. The dataset is based on nighttime dashcam footage collected from six different cities around the world, capturing a wide varie…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.11583</code> / <code>dislike</code></li>
+</ul>
+<h3>12. <a href="https://doi.org/10.4271/2026-28-0148">Simulation Based Approach to the Verification and Validation of Camera Based Autonomous Emergency Braking Systems for Commercial Vehicles</a></h3>
+<ul>
+<li>子方向：场景生成 / 车辆约束下的对抗场景生成　|　日期：2026-11-05　|　来源：semantic_scholar</li>
+<li>作者：Nagabhushana N. S., Gururaaj P., M. L. Sankar</li>
+<li><strong>综合分 4.5</strong>　嵌入相关 0.73　质量 0.00　LLM: 相关5 新颖4 实验5 入门7</li>
+<li>📝 TL;DR：基于VTD/RoadRunner生成印度商用车相机AEB的仿真测试场景，做黑盒V&amp;V验证。</li>
+<li>💡 理由：属于道路车辆安全系统仿真测试与场景构建，工程性强但方法新意有限，偏应用参考。</li>
+<li><a href="https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421f4f848d228226f/10.4271/2026-28-0148">WebVPN</a> · <a href="https://doi.org/10.4271/2026-28-0148">DOI</a></li>
+<li>摘要：Autonomous Emergency Braking (AEB) is a safety-critical Advanced Driver Assistance System now mandated for commercial vehicles in India.to reduce crash frequency and severity. This paper presents a structured, simulation-based V&amp;V approach for camera-based AEB that integrates TTC braking evaluation, Forward Collision Warning assessment, and real-time object detection validation. High-fidelity tools Hexagon VTD &amp; ROD, and MATLAB Roadrunner are employed to generate photorealistic, India-specific scenarios capable of modelling detailed road geometry, marked and unmarked lanes, mixed traffic behav…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.4271/2026-28-0148</code> / <code>dislike</code></li>
+</ul></body>

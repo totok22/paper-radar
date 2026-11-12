@@ -1,0 +1,164 @@
+<!doctype html><meta charset='utf-8'><title>Paper Radar 2026-11-12</title><body style='max-width:900px;margin:auto;font-family:sans-serif;line-height:1.6'><h1>📡 Paper Radar 日报 2026-11-12</h1>
+<blockquote>
+<p>来源召回：{'arxiv': 311, 'openalex': 177, 'journals': 14, 'semantic_scholar': 77, 'deepseek_search': 32}　→ 去重后 423　→ 嵌入预筛 40　→ 推送 12　|　嵌入: api　评分: LLM(deepseek-flash)</p>
+</blockquote>
+<h2>运动规划（7）</h2>
+<h3>1. <a href="https://arxiv.org/abs/2611.01283">DriftingPlanner: Drifting Generative Models for One-Step Trajectory Planning in End-to-End Autonomous Driving</a></h3>
+<ul>
+<li>子方向：运动规划 / 视觉语言大模型-场景行为映射　|　日期：2026-10-31　|　来源：semantic_scholar</li>
+<li>作者：Zi-Ming Liu, Yi-Zhan Qu, Lei-Chen Wang, Hao Sun</li>
+<li><strong>综合分 6.5</strong>　嵌入相关 0.67　质量 0.04　LLM: 相关9 新颖7 实验5 入门4</li>
+<li>实验关键词: navsim；作者最高 h-index: 10</li>
+<li>📝 TL;DR：将漂移生成模型的吸引-排斥场训练引入端到端规划，实现单步生成多模态自车轨迹。</li>
+<li>💡 理由：把图像生成的drifting模型迁移到端到端轨迹规划，单步推理兼顾多模态，方向契合且想法新颖，值得跟进。</li>
+<li><a href="https://arxiv.org/pdf/2611.01283">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.01283">arXiv</a></li>
+<li>摘要：End-to-end planners decode the ego trajectory either by coordinate regression, which is fast but blends plausible maneuvers into one trajectory that may follow none of them, or by diffusion and flow matching, which model the trajectory distribution but need several inference steps. Drifting models move this iteration into training: a one-step generator learns to follow an attraction--repulsion field between generated and ground-truth samples. Drifting was developed for class-conditional image generation, where every class supplies many positive samples. In planning, every scene is its own cond…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.01283</code> / <code>dislike</code></li>
+</ul>
+<h3>2. <a href="https://arxiv.org/abs/2511.22928">Predicting Risks Before They Happen: Vision-Language Reasoning for Autonomous Driving</a></h3>
+<ul>
+<li>子方向：运动规划 / 视觉语言大模型-场景行为映射　|　日期：　|　来源：deepseek_search</li>
+<li>作者：</li>
+<li><strong>综合分 6.1</strong>　嵌入相关 0.80　质量 0.05　LLM: 相关8 新颖6 实验5 入门6</li>
+<li>实验关键词: real-vehicle；作者最高 h-index: 13</li>
+<li>📝 TL;DR：用视觉语言模型对驾驶场景做风险预判推理，并输出自然语言驾驶建议与横向纵向元动作。</li>
+<li>💡 理由：VLM 场景理解映射到行为级元动作，正对场景-行为映射子方向；输出为高层指令而非轨迹，落地需下游规划器补全。</li>
+<li><a href="https://arxiv.org/pdf/2511.22928">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2511.22928">arXiv</a></li>
+<li>摘要：The two action steps translate this inference into a driving response. Driving Suggestion () describes a mitigation strategy in natural language. Meta Action (a1a_{1}) specifies immediate longitudinal and lateral behavior, such as slowing down while keeping lane, together with behavior-level guidance such as avoiding overtaking. These are high-level commands for an ADS, rather than actuator controls or trajectories. Supervising the five steps individually provides explicit targets for grounding the risk inference and its resulting action.a2a_{2}</li>
+</ul>
+<p>III-C Training and inference</p>
+<p>The full training…
+- 反馈：<code>python -m paper_radar feedback like arxiv:2511.22928</code> / <code>dislike</code></p>
+<h3>3. <a href="https://doi.org/10.3390/electronics15215179">Guiding Reinforcement Learning with LLM Knowledge Reasoning Toward Safe End-to-End Autonomous Driving</a></h3>
+<ul>
+<li>子方向：运动规划 / 大模型驱动的行为基元库增量式扩展　|　日期：2026-11-07　|　来源：semantic_scholar</li>
+<li>作者：Shou-Guan Xiao, Ye-Qing Dou, Yue-Ying Zhang</li>
+<li><strong>综合分 6.0</strong>　嵌入相关 1.00　质量 0.01　LLM: 相关7 新颖6 实验5 入门5</li>
+<li>实验关键词: closed-loop；作者最高 h-index: 3</li>
+<li>📝 TL;DR：用 VLM 描述场景、LLM 做交通规则与常识推理，为自动驾驶 RL 决策提供结构化知识引导，降低对交互样本的依赖。</li>
+<li>💡 理由：把 LLM 知识推理注入 RL 决策回路，属 LLM 驱动运动规划的典型思路；但框架增量性不足，实验细节在摘要中未体现。</li>
+<li><a href="https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421f4f848d228226f/10.3390/electronics15215179">WebVPN</a> · <a href="https://doi.org/10.3390/electronics15215179">DOI</a></li>
+<li>摘要：Traditional decision-making methods based on reinforcement learning (RL) for autonomous vehicles rely heavily on environmental interaction samples. These models learn driving policies only implicitly from data and cannot explicitly utilize traffic regulations, driving ethics, or prior human driving experience, which may lead to unsafe control behaviors. A large language model (LLM) has powerful semantic understanding and knowledge reasoning capabilities; however, its high inference latency makes it difficult to directly achieve continuous closed-loop vehicle control. To address these issues, t…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.3390/electronics15215179</code> / <code>dislike</code></li>
+</ul>
+<h3>4. <a href="https://arxiv.org/abs/2611.14286">ForeseeDrive: Future-Token Conditioning for Anticipatory Generative Driving</a></h3>
+<ul>
+<li>子方向：运动规划 / 视觉语言大模型-场景行为映射　|　日期：2026-11-10　|　来源：arxiv, deepseek_search</li>
+<li>作者：Shaokai Wu, Xunchu Zhou, Pinzhi Wang, Bo Dong, Yuting Hu, Yanbiao Ji 等</li>
+<li><strong>综合分 5.9</strong>　嵌入相关 0.68　质量 0.04　LLM: 相关8 新颖7 实验4 入门3</li>
+<li>备注: 15 pages (8 pages main text + appendix), 3 figures, 7 tables；作者最高 h-index: 12</li>
+<li>📝 TL;DR：以未来token条件化生成候选轨迹，并配合候选保留与TTC安全裕度筛选，提升端到端驾驶规划安全性。</li>
+<li>💡 理由：面向自动驾驶端到端生成的规划框架，选题新颖；但摘要写作混乱、缺少实验细节，方法完整性待正文核实。</li>
+<li><a href="https://arxiv.org/pdf/2611.14286">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.14286">arXiv</a></li>
+<li>摘要：The teacher does not simply provide a stronger representation or a future-aware score; it defines action-facing token targets that the student predicts online and that condition generation before candidates are sampled.</li>
+</ul>
+<p>Candidate selection and safety-aware planning.</p>
+<p>Candidate scoring and reranking are effective when a planner already generates a sufficiently diverse set of alternatives. However, selection is structurally limited by the sampled support: a scorer cannot recover a yielding, braking, or nudging maneuver that was never generated. Safety-aware planning and benchmark metrics furthe…
+- 反馈：<code>python -m paper_radar feedback like arxiv:2611.14286</code> / <code>dislike</code></p>
+<h3>5. <a href="https://arxiv.org/abs/2605.14201">MAPLE: Latent Multi-Agent Play for End-to-End Autonomous DrivingThanks: Qualcomm AI Research is an initiative of Qualcomm Technologies, Inc.</a></h3>
+<ul>
+<li>子方向：运动规划 / 基元的扩展与选择 + DMP 算法　|　日期：　|　来源：deepseek_search</li>
+<li>作者：</li>
+<li><strong>综合分 5.6</strong>　嵌入相关 0.72　质量 0.07　LLM: 相关7 新颖6 实验5 入门5</li>
+<li>实验关键词: closed-loop；作者最高 h-index: 19</li>
+<li>📝 TL;DR：为每个交通体配置多个离散规划器并用多样性感知GRPO奖励，避免行为同质与模式坍塌。</li>
+<li>💡 理由：端到端闭环驾驶中引入多规划器/行为库与多样性奖励，与基元扩展选择思路接近，但实验细节在摘要中不足，需读全文核实。</li>
+<li><a href="https://arxiv.org/pdf/2605.14201">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2605.14201">arXiv</a></li>
+<li>摘要：Diffusion-based planners, including DiffusionDrive [30], DiffusionPlanner [55], and GoalFlow [50], capture multimodal trajectory distributions through stochastic sampling but do not explicitly encourage behavioral diversity during training, leaving them prone to mode collapse under RL fine-tuning [27]. GRPO [37] has been adapted for driving in AlphaDrive [25], R2SE [31], and TrajHF [28], improving policy stability via rule-based rewards, though each assigns a single planner per agent. Sun et al. [41] use latent token sequences and diversity-seeking rewards, focusing more on reasoning and not c…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2605.14201</code> / <code>dislike</code></li>
+</ul>
+<h3>6. <a href="https://doi.org/10.1109/tce.2026.3752987">Hybrid Dynamics Modeling of Three-Axle Commercial Vehicles Based on a Load-Adaptive Physics Prior Model and Load-Gated Temporal Residual Learning</a></h3>
+<ul>
+<li>子方向：运动规划 / 基元的扩展与选择 + DMP 算法　|　日期：2026-01-01　|　来源：deepseek_search</li>
+<li>作者：Zhihao Li, Xiaoqiang Sun, Hai Wang, Yingfeng Cai, Long Chen</li>
+<li><strong>综合分 5.4</strong>　嵌入相关 0.35　质量 0.00　LLM: 相关7 新颖7 实验7 入门6</li>
+<li>📝 TL;DR：用载荷自适应9自由度物理先验加LG-GRU残差网络，建模三轴商用车随载荷变化的动力学。</li>
+<li>💡 理由：面向道路商用车，把物理先验与数据驱动残差结合做动力学建模与参数调度，属车辆动力学参量学习方向，工程价值明确；但偏建模辨识，与规划/控制回路结合较弱。</li>
+<li><a href="https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421f9f244993f20645f6c0dc7a59d50267b1ab4a9/document/11793184">WebVPN</a> · <a href="https://ieeexplore.ieee.org/servlet/wayf.jsp?entityId=https%3A%2F%2Fidp.bit.edu.cn%2Fidp%2Fshibboleth&amp;url=https%3A%2F%2Fieeexplore.ieee.org%2Fdocument%2F11793184">CARSI</a> · <a href="https://doi.org/10.1109/tce.2026.3752987">DOI</a></li>
+<li>摘要：Hybrid Dynamics Modeling of Three-Axle Commercial Vehicles Based on a Load-Adaptive Physics Prior Model and Load-Gated Temporal Residual Learning
+...
+To address the limited adaptability of fixed-parameter models and the difficulty in representing residual nonlinear dynamics of three-axle commercial vehicles under varying payloads, this paper proposes a hybrid dynamics modeling framework combining a load-adaptive 9DOF physics-based prior model with a load-gated GRU (LG-GRU) residual compensation network. A dynamic equivalent center-of-gravity (CG) identification method incorporating physical co…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.1109/tce.2026.3752987</code> / <code>dislike</code></li>
+</ul>
+<h3>7. <a href="https://arxiv.org/abs/2611.14299">Energy- and Time-Efficient Multi-Vehicle Trajectory Planning Using Augmented DAG Search in Configuration Space</a></h3>
+<ul>
+<li>子方向：运动规划 / 基元的扩展与选择 + DMP 算法　|　日期：2026-11-10　|　来源：arxiv</li>
+<li>作者：Amirreza Akbari, Galina Sidorenko, Johan Thunberg</li>
+<li><strong>综合分 4.9</strong>　嵌入相关 0.41　质量 0.15　LLM: 相关6 新颖5 实验6 入门5</li>
+<li>刊会: Transactions on Intelligent Transportation；备注: This manuscript is currently under review at IEEE Transactions on Intelligent Transportation Systems；作者最高 h-index: 7</li>
+<li>📝 TL;DR：在配置空间上用增广 DAG 搜索，联合优化多 CAV 的能耗与通行时间。</li>
+<li>💡 理由：面向网联自动驾驶车辆交叉口的多车轨迹规划，属道路车辆运动规划；但非基元/DMP 或大模型驱动，子方向匹配偏弱。</li>
+<li><a href="https://arxiv.org/pdf/2611.14299">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2611.14299">arXiv</a></li>
+<li>摘要：Multi-vehicle trajectory planning for CAV requires balancing energy consumption and travel time while ensuring safety and scalability. While travel-time-optimal methods based on Integer Programming exhibit poor scalability in large-scale multi-vehicle scenarios, existing energy-oriented approaches fail to balance energy consumption and travel time. We extend a configuration-space framework for multi-vehicle trajectory planning to jointly locally optimize travel time and energy consumption. A weighted energy-travel time objective is combined with an efficient augmented DAG search on two-dimensi…</li>
+<li>反馈：<code>python -m paper_radar feedback like arxiv:2611.14299</code> / <code>dislike</code></li>
+</ul>
+<h2>运动控制（2）</h2>
+<h3>8. <a href="https://doi.org/10.1002/rnc.70821">Robust Funnel Control for Vehicle Lateral Tracking Without Road Curvature Information</a></h3>
+<ul>
+<li>子方向：运动控制 / MPC 与车辆控制器部署　|　日期：2026-11-09　|　来源：openalex</li>
+<li>作者：Weiling Ke, Xianlin Zeng, Daiying Tian, Yi Shi, Shanghao Li</li>
+<li><strong>综合分 5.2</strong>　嵌入相关 0.75　质量 0.00　LLM: 相关6 新颖5 实验6 入门6</li>
+<li>实验关键词: carla</li>
+<li>📝 TL;DR：基于 Frenet 分解设计漏斗控制横向控制器，在无需道路曲率信息下把横向误差约束在时变边界内。</li>
+<li>💡 理由：面向道路车辆的横向跟踪控制器设计，并在 CARLA 验证，属车辆控制范畴；但属经典鲁棒控制，与 MPC/学习类控制前沿关联有限。</li>
+<li><a href="https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421f4f848d228226f/10.1002/rnc.70821">WebVPN</a> · <a href="https://doi.org/10.1002/rnc.70821">DOI</a></li>
+<li>摘要：ABSTRACT This article addresses the challenge of autonomous vehicle control on curved roads by developing a funnel‐based control framework, in which vehicle motion is decomposed into longitudinal and lateral subsystems using the Frenet frame. A funnel‐based lateral controller is designed to constrain the lateral tracking error within prescribed time‐varying boundaries. In contrast to curvature‐dependent control approaches, the proposed lateral controller does not require explicit road curvature information and handles the relative‐degree‐two lateral error dynamics using a low‐complexity funnel…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.1002/rnc.70821</code> / <code>dislike</code></li>
+</ul>
+<h3>9. <a href="https://doi.org/10.3390/vehicles8110292">Model Predictive Control for Active Front Steering of Mechanical Elastic Wheel Vehicles Considering Tire Transient Characteristics</a></h3>
+<ul>
+<li>子方向：运动控制 / MPC 与车辆控制器部署　|　日期：2026-11-06　|　来源：semantic_scholar</li>
+<li>作者：Jian-Biao Shen, Cheng-Xi Liu, Shou-Gang Ma, Fen Lin</li>
+<li><strong>综合分 4.8</strong>　嵌入相关 0.68　质量 0.08　LLM: 相关5 新颖5 实验6 入门5</li>
+<li>作者最高 h-index: 23</li>
+<li>📝 TL;DR：针对机械弹性车轮车辆，用UKF在线估计轮胎松弛长度并嵌入MPC预测模型，改善主动前轮转向操纵稳定性。</li>
+<li>💡 理由：轮胎瞬态特性建模+MPC前轮转向控制，思路清晰且偏工程落地，但对象为特种弹性车轮车辆，与乘用车道路场景迁移性有限。</li>
+<li><a href="https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421f4f848d228226f/10.3390/vehicles8110292">WebVPN</a> · <a href="https://doi.org/10.3390/vehicles8110292">DOI</a></li>
+<li>摘要：During vehicle operation, lateral tire forces generally require a finite time to reach their steady-state values, and this dynamic response can be characterized by the tire relaxation length. For an active front steering (AFS) vehicle equipped with a mechanical elastic wheel (MEW), an MPC-based control strategy is developed to account for this delayed tire response and improve handling stability. The front steering angle is selected as the control input, while a first-order lag formulation is incorporated into the prediction model to represent the transient evolution of lateral tire forces. To…</li>
+<li>反馈：<code>python -m paper_radar feedback like doi:10.3390/vehicles8110292</code> / <code>dislike</code></li>
+</ul>
+<h2>场景生成（3）</h2>
+<h3>10. <a href="https://doi.org/10.1109/lra.2026.3752312">StyleAD: Safe and Adaptive Trajectory Planning via Style-Aware World Models</a></h3>
+<ul>
+<li>子方向：场景生成 / 基于扩散模型的动态场景生成　|　日期：2026-01-01　|　来源：deepseek_search</li>
+<li>作者：Xinyi Quan, Zhiwei Zhang, Yi Zhao, Zhen Wang, Kaijie Bao, Wenchao Ding</li>
+<li><strong>综合分 6.2</strong>　嵌入相关 0.75　质量 0.30　LLM: 相关7 新颖6 实验6 入门4</li>
+<li>刊会: Robotics and Automation Letters；实验关键词: nuplan, closed-loop</li>
+<li>📝 TL;DR：用风格感知的自回归世界模型生成多样化周边车辆行为，提升RL轨迹规划的安全与适应性。</li>
+<li>💡 理由：面向城市道路自动驾驶轨迹规划，风格化反应式世界模型做多智能体推演，思路清晰但RL+变分推断门槛偏高，适合作进阶参考。</li>
+<li><a href="https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421f4f848d228226f/10.1109/lra.2026.3752312">WebVPN</a> · <a href="https://doi.org/10.1109/lra.2026.3752312">DOI</a></li>
+<li>摘要：StyleAD: Safe and Adaptive Trajectory Planning via Style-Aware World Models</li>
+</ul>
+<p>Trajectory planning is critical for safe and comfortable autonomous driving in complex urban environments.
+...
+While reinforcement learning (RL) offers a promising framework for closed-loop decision-making, its effectiveness depends heavily on the realism and diversity of surrounding agents in the training environment. Existing autoregressive world models enable reactive multi-agent simulation, but they typically rely on a homogeneous behavior model, limiting policy robustness across diverse traffic styles. To addres…
+- 反馈：<code>python -m paper_radar feedback like doi:10.1109/lra.2026.3752312</code> / <code>dislike</code></p>
+<h3>11. <a href="https://arxiv.org/abs/2601.11475">Generative Scenario Rollouts for End-to-End Autonomous DrivingThanks: Qualcomm AI Research is an initiative of Qualcomm Technologies, Inc.</a></h3>
+<ul>
+<li>子方向：场景生成 / 基于扩散模型的动态场景生成　|　日期：　|　来源：deepseek_search</li>
+<li>作者：</li>
+<li><strong>综合分 5.6</strong>　嵌入相关 0.81　质量 0.08　LLM: 相关7 新颖6 实验4 入门5</li>
+<li>作者最高 h-index: 19</li>
+<li>📝 TL;DR：面向端到端自动驾驶的生成式场景 rollout，用生成模型产出多模态未来轨迹分布以增强闭环训练与评测。</li>
+<li>💡 理由：生成式 rollout 与端到端驾驶结合值得关注；但摘录内容多为相关工作片段，方法细节与实验尚不清晰。</li>
+<li><a href="https://arxiv.org/pdf/2601.11475">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2601.11475">arXiv</a></li>
+<li>摘要：In the VLA context, ORION extends its framework with a VAE-based generative planner that translates LLM outputs into trajectory distributions [11]. DiVLA [32] combines autoregressive reasoning with diffusion policy learning, introducing a reasoning injection module that enhances interpretability and generalization. These generative VLA models establish a foundation for explainable, multimodal driving policies, motivating our generative rollout approach.</li>
+</ul>
+<p>2.3 Reinforcement Learning for Driving</p>
+<p>Reinforcement learning (RL) has emerged as a powerful paradigm for improving policy generalization an…
+- 反馈：<code>python -m paper_radar feedback like arxiv:2601.11475</code> / <code>dislike</code></p>
+<h3>12. <a href="https://arxiv.org/abs/2604.01044">CROWD: A global dataset of continuous urban dashcam driving</a></h3>
+<ul>
+<li>子方向：场景生成 / 场景数据管理、标注与后处理　|　日期：　|　来源：deepseek_search</li>
+<li>作者：</li>
+<li><strong>综合分 4.7</strong>　嵌入相关 0.57　质量 0.08　LLM: 相关6 新颖4 实验5 入门7</li>
+<li>实验关键词: nuscenes, waymo, argoverse；作者最高 h-index: 22</li>
+<li>📝 TL;DR：发布全球城市行车记录仪连续视频数据集，含伪标注与防泄漏划分。</li>
+<li>💡 理由：行车视角自然驾驶数据及标注/划分方案，对场景挖掘与数据处理有实用价值。</li>
+<li><a href="https://arxiv.org/pdf/2604.01044">PDF (arXiv preprint)</a> · <a href="https://arxiv.org/abs/2604.01044">arXiv</a></li>
+<li>探索位：这条不是纯按分数挤进来的，用来补一个还没被代表的方向</li>
+<li>摘要：person, bicycle, motorcycle, car, bus, truck, traffic light, stop sign, etc. CROWD is distributed as video identifiers with segment boundaries and derived detection and tracking pseudo-labels, enabling reproducible research without redistributing the underlying videos. To support leakage-free evaluation, we also provide canonical splits grouped by source channel or by locality, and weights that balance the contribution of localities and countries.</li>
+</ul>
+<p>Background &amp; Summary</p>
+<p>Urban traffic is a visually and behaviourally complex environment in which vulnerable road users (VRUs), particularly pedestr…
+- 反馈：<code>python -m paper_radar feedback like arxiv:2604.01044</code> / <code>dislike</code></p></body>
